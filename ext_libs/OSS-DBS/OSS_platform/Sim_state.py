@@ -77,7 +77,8 @@ def manage_folders(d):
         os.makedirs('/opt/Patient/Field_solutions_functions')
     if d["IFFT_ready"]!=1:
         if os.path.isdir('/opt/Patient/Points_in_time'):
-            shutil.rmtree('/opt/Patient/Points_in_time')
+            #shutil.rmtree('/opt/Patient/Points_in_time')
+            os.system('rm -fr Points_in_time')
         os.makedirs('/opt/Patient/Points_in_time')
         if os.path.isdir('/opt/Patient/Animation_Field_in_time'):
             shutil.rmtree('/opt/Patient/Animation_Field_in_time')
