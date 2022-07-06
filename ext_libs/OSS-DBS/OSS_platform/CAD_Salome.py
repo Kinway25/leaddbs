@@ -104,7 +104,8 @@ def build_brain_approx(approx_dimensions, approx_geom_center, MRI_param = 0):
     logging.critical("----- Creating brain approximation in SALOME -----")
 
     #  run Brain_substitute.py using Salome
-    with open(os.devnull, 'w') as FNULL: subprocess.call('salome -t python3 '+ brain_substitute_path +' --ns-port-log='+direct+'/salomePort.txt', shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+    #with open(os.devnull, 'w') as FNULL: subprocess.call('salome -t python3 '+ brain_substitute_path +' --ns-port-log='+direct+'/salomePort.txt', shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+    pro = subprocess.Popen(['salome','-t','python3',brain_substitute_path], stdout=subprocess.PIPE, shell=True)  
     #kill_SALOME_port()
     logging.critical("Brain_substitute.brep was created\n")
 
@@ -113,6 +114,9 @@ def build_brain_approx(approx_dimensions, approx_geom_center, MRI_param = 0):
     with open(os.devnull, 'w') as FNULL: subprocess.call('gmsh ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.med -3 -v 0 -o ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.msh2 && mv ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.msh2 ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.msh',shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
     with open(os.devnull, 'w') as FNULL: subprocess.call('dolfin-convert ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.msh ' + os.environ['PATIENTDIR']+'/Meshes/Mesh_brain_substitute_max_ROI.xml',shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
 
+    # kill the salome subprocess
+    pro.kill()    
+        
     # the dimensions might need to be adjusted later
     return [x_length, y_length, z_length]
 
