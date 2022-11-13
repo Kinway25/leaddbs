@@ -360,11 +360,47 @@ classdef ea_disctract < handle
                 cvp = cvpartition(length(obj.patientselection),'KFold',obj.kfold);
                 [I,Ihat] = crossval(obj,cvp);
             else
+                r_over_iter = zeros(iter,1);
+                p_over_iter = zeros(iter,1);
                 for i=1:iter
                     cvp = cvpartition(length(obj.patientselection), 'KFold', obj.kfold);
                     fprintf("Iterating fold set: %d",i)
                     [I_iter{i}, Ihat_iter{i}] = crossval(obj, cvp);
+                    [r_over_iter(i),p_over_iter(i)]=ea_permcorr(I_iter{i},Ihat_iter{i},'spearman');
                 end
+
+                % check model agreement over shuffles using Sequential Rank Agreement
+                permPval = ea_compute_pval_SeqRankAgr(Ihat_iter);
+
+                % plot r-vals over shuffles
+                p_above_05 = p_over_iter(find(p_over_iter>0.05),:);
+                p_above_01 = p_over_iter(find(p_over_iter>0.01),:);
+                h = figure('Name','Over-fold analysis','Color','w','NumberTitle','off');
+                g = ea_raincloud_plot(r_over_iter,'box_on',1);
+                a1=gca;
+                set(a1,'ytick',[])
+                a1.XLabel.String='Spearman''s r-vals';
+                %a1.YLabel.String = 'Spearman''s r-vals';
+
+                if min(r_over_iter) >= -0.9
+                    r_lower_lim = min(r_over_iter) - 0.1;
+                else
+                    r_lower_lim = -1.0;
+                end
+
+                if max(r_over_iter) <= 0.9
+                    r_upper_lim = max(r_over_iter) + 0.1;
+                else
+                    r_upper_lim = 1.0;
+                end
+
+                a1.XLim=([r_lower_lim r_upper_lim]);  
+
+                text(0.25,0.9,['N(p>0.05) = ',sprintf('%0.2f',length(p_above_05))],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
+                text(0.25,0.83,['N(p>0.01) = ',sprintf('%0.2f',length(p_above_01))],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
+                text(0.25,0.76,['p_{perm} for Ihat = ',sprintf('%0.2f',permPval)],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
+
+                % we should think about this part
                 I_iter = cell2mat(I_iter);
                 Ihat_iter = cell2mat(Ihat_iter);
                 I = mean(I_iter,2,'omitnan');
@@ -513,7 +549,27 @@ classdef ea_disctract < handle
                     %Abs_pred_error(c) = abs(Improvement(test) - Ihat_voters_prediction(test));
                     Predicted_scores(test) = Ihat_voters_prediction(1:end,1); % only one value here atm
                 end
+            end
 
+            disp('Cheking model score agreement over folds using Sequential Rank Agreement')
+            % check rank agreement between training(!) folds
+            if cvp.NumTestSets ~= 1
+                Ihat_combined = cell(1,cvp.NumTestSets);
+                %Ihat_combined = Ihat_train_global;
+                for c=1:cvp.NumTestSets
+                    if isobject(cvp)
+                        training = cvp.training(c);
+                        test = cvp.test(c);
+                    elseif isstruct(cvp)
+                        training = cvp.training{c};
+                        test = cvp.test{c};
+                    end
+                    Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
+                    Ihat_combined{c}(test,1) = Ihat(test,1);
+                end
+                permPval = ea_compute_pval_SeqRankAgr(Ihat_combined);
+                disp("permPval")
+                disp(permPval)
             end
 
             if obj.nestedLOO
