@@ -370,8 +370,14 @@ classdef ea_disctract < handle
                 end
 
                 % check model agreement over shuffles using Sequential Rank Agreement
-                permPval = ea_compute_pval_SeqRankAgr(Ihat_iter);
-
+                % disabled for PCA
+                switch obj.multitractmode
+                    case 'Split & Color By PCA'
+                        disp("Sequential Rank Agreement is not implemented for PCA")
+                    otherwise
+                        permPval = ea_compute_pval_SeqRankAgr(Ihat_iter);
+                end
+                     
                 % plot r-vals over shuffles
                 p_above_05 = p_over_iter(find(p_over_iter>0.05),:);
                 p_above_01 = p_over_iter(find(p_over_iter>0.01),:);
@@ -398,8 +404,12 @@ classdef ea_disctract < handle
 
                 text(0.25,0.9,['N(p>0.05) = ',sprintf('%0.2f',length(p_above_05))],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
                 text(0.25,0.83,['N(p>0.01) = ',sprintf('%0.2f',length(p_above_01))],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
-                text(0.25,0.76,['p_{perm} for Ihat = ',sprintf('%0.2f',permPval)],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
-
+                switch obj.multitractmode
+                    case 'Split & Color By PCA'
+                        disp("Sequential Rank Agreement is not implemented for PCA")
+                    otherwise
+                        text(0.25,0.76,['p_{perm} for Ihat = ',sprintf('%0.2f',permPval)],'FontWeight','bold','FontSize',14,'HorizontalAlignment','right','Units','normalized');
+                end
                 % we should think about this part
                 I_iter = cell2mat(I_iter);
                 Ihat_iter = cell2mat(Ihat_iter);
@@ -551,9 +561,10 @@ classdef ea_disctract < handle
                 end
             end
 
-            disp('Cheking model score agreement over folds using Sequential Rank Agreement')
             % check rank agreement between training(!) folds
-            if cvp.NumTestSets ~= 1
+            % disabled for multitract and PCA
+            if cvp.NumTestSets ~= 1 && strcmp(obj.multitractmode,'Single Tract Analysis')
+                disp('Cheking model score agreement over folds using Sequential Rank Agreement')
                 Ihat_combined = cell(1,cvp.NumTestSets);
                 %Ihat_combined = Ihat_train_global;
                 for c=1:cvp.NumTestSets
@@ -564,6 +575,7 @@ classdef ea_disctract < handle
                         training = cvp.training{c};
                         test = cvp.test{c};
                     end
+
                     Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
                     Ihat_combined{c}(test,1) = Ihat(test,1);
                 end

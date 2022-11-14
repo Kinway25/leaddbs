@@ -5,6 +5,8 @@ function permpRank = ea_compute_pval_SeqRankAgr(Ihat_iter)
     % Implemented following Ekstrom et al
     % https://doi.org/10.1093/biostatistics/kxy017
 
+
+
     % rank all data columnwise
     rankedScores = zeros(size(Ihat_iter{1,1},1),size(Ihat_iter,2));
     for i = 1:size(rankedScores,2)
@@ -20,7 +22,7 @@ function permpRank = ea_compute_pval_SeqRankAgr(Ihat_iter)
     if length(rankedScores(:,1)) <= 7
         num_perms = size(perms(rankedScores(:,1)),1);
     else
-        num_perms = 10000;
+        num_perms = 25000;
     end
     
     % compute agreement for each permutation
@@ -55,7 +57,7 @@ function permpRank = ea_compute_pval_SeqRankAgr(Ihat_iter)
         perm_rankedScores = rankedScores;
         for i = 1:size(rankedScores,2)
             %perm_rankedScores(:,i) = shuffledRanks{i,1}(p,:)';
-            swapidx = randperm(numel(perm_rankedScores(:,i)), 2);
+            swapidx = randperm(numel(perm_rankedScores(:,i)), 3);
             a = perm_rankedScores(:,i);
             a(swapidx) = a(fliplr(swapidx));
             perm_rankedScores(:,i) = a;
