@@ -1,5 +1,5 @@
 function [Ihat,Ihat_train_global,vals,actualimprovs] = ea_compute_fibscore_model(numTestIt,adj_scaler, obj, fibsval, Ihat, Ihat_train_global, patientsel, training, test, Iperm)
-    if ~exist('Iperm', 'var')
+    if ~exist('Iperm', 'var') || isempty(Iperm)
         if obj.cvlivevisualize
             [vals,fibcell,usedidx] = ea_discfibers_calcstats(obj, patientsel(training));
             obj.draw(vals,fibcell,usedidx)
@@ -21,7 +21,7 @@ function [Ihat,Ihat_train_global,vals,actualimprovs] = ea_compute_fibscore_model
 
     % if no fibers were selected for the permutation iteration, 
     % assign dummies that will have r = 0
-    if isempty(vals{1}) && isempty(vals{2}) && exist('Iperm', 'var')
+    if isempty(vals{1}) && isempty(vals{2}) && exist('Iperm', 'var') && ~isempty(Iperm)
         for voter=1:size(vals,1)
             for side=1:size(vals,2)
                 actualimprovs{voter,side} = 42;
