@@ -376,7 +376,8 @@ classdef ea_disctract < handle
                         case 'Split & Color By PCA'
                             disp("Fold Agreement is not evaluated for PCA")
                         otherwise
-                            [r_over_iter(i),p_over_iter(i)]=ea_permcorr(I_iter{i},Ihat_iter{i},'spearman');
+                            inx_nnan = find(isnan(I_iter{i}) ~= 1);
+                            [r_over_iter(i),p_over_iter(i)]=ea_permcorr(I_iter{i}(inx_nnan),Ihat_iter{i}(inx_nnan),'spearman');
                     end
                 end
 
@@ -491,9 +492,7 @@ classdef ea_disctract < handle
             end
 
             if obj.useExternalModel == true
-
                 S = load(obj.ExternalModelFile);
-                %S = load(['Kappel_vals_all_model.mat']);
                 if ~strcmp(ea_method2methodid(obj),S.fibsvalType)
                     waitfor(msgbox('Change the Model Setup! See terminal'));
                     disp('The loaded model uses: ')
@@ -902,8 +901,6 @@ classdef ea_disctract < handle
                 end
             end
 
-
-            
             tractset.useExternalModel = false;
             tractset.ExternalModelFile = 'None'; % do not store imported models
             tractset.resultfig=[]; % rm figure handle before saving.

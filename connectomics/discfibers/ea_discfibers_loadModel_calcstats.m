@@ -44,9 +44,6 @@ for group = 1:size(vals,1)
         %fibcell{group,side}=obj.results.(ea_conn2connid(obj.connectome)).fibcell{side}(~isnan(vals{group,side}));
         fibcell{group,side}=obj.results.(ea_conn2connid(obj.connectome)).fibcell{side}(usedidx{group,side});
 
-
-
-
         %if exist('pvals','var')
         %    pvals{group,side}=pvals{group,side}(usedidx{group,side}); % final weights for surviving fibers
         %end

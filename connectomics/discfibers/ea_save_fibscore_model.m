@@ -65,7 +65,6 @@ function ea_save_fibscore_model(obj, ExternalModelFile)
     ftr.vals_all = vals_all;
     ftr.connectome = ea_conn2connid(obj.connectome);
     ftr.conn_type = obj.connectivity_type;
-    %ftr.connectome = 'InvivoConnectome760umWang2021';
     ftr.fibsvalType = ea_method2methodid(obj);
 
     save(ExternalModelFile, '-struct', 'ftr');
