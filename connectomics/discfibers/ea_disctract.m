@@ -998,9 +998,17 @@ classdef ea_disctract < handle
                         try
                             switch obj.connectivity_type
                                 case 2
-                                    vals_connected{voter,side} = S.vals_all{voter,side}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side});
+                                    if size(S.vals_all,2) == 2
+                                        vals_connected{voter,side} = S.vals_all{voter,side}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side});
+                                    else
+                                        vals_connected{voter,side} = S.vals_all{voter,1}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side});
+                                    end
                                 otherwise
-                                    vals_connected{voter,side} = S.vals_all{voter,side}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side});
+                                    if size(S.vals_all,2) == 2
+                                        vals_connected{voter,side} = S.vals_all{voter,side}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side});
+                                    else
+                                        vals_connected{voter,side} = S.vals_all{voter,1}(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side});
+                                    end
                             end
                         catch
                             ea_warndlg("Connectivity indices were not stored. Please recalculate.");
