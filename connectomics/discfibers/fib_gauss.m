@@ -4,7 +4,7 @@ function [smp1_gauss,idxi_1]=fib_gauss(smp1,sig,trgt_coor,vcnty_thr,dim)
 % Running Fibertract 1
 rmv_1=[];
 for hh=1:length(smp1) 
-    vc_euc=sqrt(sum(smp1(hh,:) - trgt_coor) .^ 2);
+    vc_euc=sqrt(sum((smp1(hh,:) - trgt_coor) .^ 2));
     if vc_euc>vcnty_thr
         rmv_1=[rmv_1;hh];
     end

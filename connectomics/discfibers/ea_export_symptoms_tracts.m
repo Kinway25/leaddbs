@@ -68,7 +68,6 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
         % target (but track the indices!)
 
 
-
         % create fibers and idx only from remaining fibers
         % but remember to use gl_indices
         fibers_with_vals = [];
@@ -87,8 +86,13 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
         % Min Jae's magic to get PRX_M
         % tracts should be ordered exactly like in gl_indices
         sig = 1.5; % Gaussian Kernel Size 
-        trgt_coor = [11.7631,-13.9674,-8.85935]; % target coordinate (e.g STN)
-        vcnty_thr = 20; % 15 mm works well. threshold vicinity mask | N.B: units are in mm
+        if side == 1
+            trgt_coor = [11.7631,-13.9674,-8.85935]; % target coordinate (e.g STN), right and left
+        else
+            trgt_coor = [-11.7631,-13.9674,-8.85935];
+        end
+            
+        vcnty_thr = 15; % 15 mm works well. threshold vicinity mask | N.B: units are in mm
         spatio_corr_mat = fiber_spatial_rev3(fibers_with_vals,trgt_coor,sig,vcnty_thr);
 
 
@@ -205,7 +209,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                     if class_number == max_N_pathways_bin
                         metric10 = metric;
                     else
-                        if metric < 0.9 * metric10 % check this condition empirically, allow 10% reduction
+                        if metric < 0.75 * metric10 % check this condition empirically, allow 25% reduction
                             fprintf("N classes: %d \n", class_number + 1 )
                             % recompute thresholds
                             [thresh, metric] = multithresh(input,class_number + 1);
@@ -264,17 +268,23 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
             ea_fibformat = '1.0';
             fourindex = 1;
 
-
-            % does not work for single fiber pathways
             for i= 1:length(pathway_index_list{1,group_i})
                 fibers_pathway = [];
                 fibers_glob_ind = [];
-                idx_pathway = zeros(length(pathway_index_list{1,group_i}{1,i}),1);
-                for j = 1:length(pathway_index_list{1,group_i}{1,i})
-                    fibers_pathway = cat(1,fibers_pathway,fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),:));
-                    fibers_pathway(fibers_pathway(:,4) == pathway_index_list{1,group_i}{1,i}(j),4) = j;
-                    fibers_glob_ind = cat(1,fibers_glob_ind,fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),4));
-                    idx_pathway(j) = length(fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),4));
+
+                if length(pathway_index_list{1,group_i}) == 1
+                    fibers_pathway = fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i},:);
+                    fibers_pathway(:,4) = 1;
+                    fibers_glob_ind = pathway_index_list{1,group_i};
+                    idx_pathway(1) = size(fibers_pathway,1);
+                else
+                    idx_pathway = zeros(length(pathway_index_list{1,group_i}{1,i}),1);
+                    for j = 1:length(pathway_index_list{1,group_i}{1,i})
+                        fibers_pathway = cat(1,fibers_pathway,fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),:));
+                        fibers_pathway(fibers_pathway(:,4) == pathway_index_list{1,group_i}{1,i}(j),4) = j;
+                        fibers_glob_ind = cat(1,fibers_glob_ind,fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),4));
+                        idx_pathway(j) = size(fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),4),1);
+                    end
                 end
                 ftr.fibers = fibers_pathway;
                 ftr.idx = idx_pathway;
@@ -282,7 +292,6 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                 ftr.fourindex = fourindex;
 
                 filename = char(compose('pathway_side_%d_%d_val.mat',side,pathway_mean_vals{1,group_i}(i)));
-                pathway_mean_vals{1,group_i}(i)
                 % you should also add the symptom name
                 save([filepath,filesep,filename],'-struct','ftr')
             end
