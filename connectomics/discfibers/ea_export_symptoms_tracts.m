@@ -21,6 +21,7 @@ end
 
 % vals_threshold - only fibers with vals above will be taken (atm, hardcoded to 0.25)
 vals_threshold = 0.25;
+var_threshold = 0.01; % acceptable variance of val within one spatial group
 
 % if negative tracts, make a note in the pathway name
 % those are for soft-threshold side-effects
@@ -109,7 +110,8 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
         
         % you can check mean(PRX_M) to decide on the clustering threhsold
 
-        prox_cluster_threshold = 0.1; % should be associated with some meaningful distance metric
+        % this is not yet optimal
+        prox_cluster_threshold = 0.2; % should be associated with some meaningful distance metric
                                       % the larger the value, the more groups you get
 
         %PRX_M = PRX_M - eye(size(PRX_M));
@@ -179,6 +181,9 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
 
         disp("Number of spatial groups "+string(length(unique(groups))))
 
+
+
+
         for group_i = 1:length(unique(groups))
 
             %clc; clear output sub_array;
@@ -192,25 +197,38 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                     max_N_pathways_bin = max_N_pathways;
                 end
     
-                metric_vals = zeros(max_N_pathways_bin-1,1);
-                for class_number = max_N_pathways_bin:-1:2
+                %metric_vals = zeros(max_N_pathways_bin-1,1);
+                for class_number = max_N_pathways_bin:-1:1
                     
                     input = vals{voter,side}(groups == group_i);  % test
                     idx_group = gl_indices(groups == group_i);
-    
+                        
+                    % check variance within the group
+                    % do not split if too small
+                    % also fixes the issue of one fiber
+                    if var(input) < var_threshold
+                        thresh = mean(input);
+                        metric = -1;
+                        break
+                    end
+
                     % Otsu's variance based method
                     [thresh, metric] = multithresh(input,class_number);
                     if metric == 0 && length(input) > 1
                         % did not work, just split by half
                         thresh = mean(input);
+                        metric = -1;
                         break
                     end
-                    metric_vals(class_number-1) = metric;
+
+                    %metric_vals(class_number-1) = metric;
                     if class_number == max_N_pathways_bin
                         metric10 = metric;
                     else
-                        if metric < 0.75 * metric10 % check this condition empirically, allow 25% reduction
+                        if metric < 0.75 * metric10 % check this condition empirically, allow 50% reduction
                             fprintf("N classes: %d \n", class_number + 1 )
+                            disp(metric)
+                            disp(metric10)                            
                             % recompute thresholds
                             [thresh, metric] = multithresh(input,class_number + 1);
                             break
@@ -220,48 +238,55 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
     
                 %plot(metric_vals,1:length(metric_vals))
     
-                pathway_index_list{1,group_i} = cell(1,length(thresh) + 1);
-                pathway_mean_vals{1,group_i} = zeros(1,length(thresh) + 1);
-    
-                for thresh_i = 1:length(thresh) + 1
-    
-                    if thresh_i == 1
-    
-                        % e.g. drop pathways with vals < 0.5 and N fibers < 10
-                        pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input < thresh(thresh_i)));
-    
-                        if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(find(idx_group(input < thresh(thresh_i)))) < 10
-                            pathway_index_list{1,group_i}{thresh_i} = 0;
-                        else
-                            pathway_index_list{1,group_i}{thresh_i} = idx_group(input < thresh(thresh_i));
+                if metric == -1 % only one val per spatial pathway
+                    pathway_index_list{1,group_i}{1,1} = idx_group;
+                    pathway_mean_vals{1,group_i}(1) = mean(input);                    
+                else
+                    pathway_index_list{1,group_i} = cell(1,length(thresh) + 1);
+                    pathway_mean_vals{1,group_i} = zeros(1,length(thresh) + 1);
+
+                    for thresh_i = 1:length(thresh) + 1
+        
+                        if thresh_i == 1
+        
+                            % e.g. drop pathways with vals < 0.5 and N fibers < 10
+                            pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input < thresh(thresh_i)));
+        
+                            if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(find(idx_group(input < thresh(thresh_i)))) < 10
+                                pathway_index_list{1,group_i}{thresh_i} = 0;
+                            else
+                                pathway_index_list{1,group_i}{thresh_i} = idx_group(input < thresh(thresh_i));
+                            end
+        
+                        elseif thresh_i == length(thresh) + 1
+        
+                            pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input >= thresh(thresh_i-1)));
+                            pathway_index_list{1,group_i}{thresh_i} = idx_group(input >= thresh(thresh_i-1));
+        
+        %                     if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(pathway_index_list{1,group_i}{thresh_i}) < 10
+        %                         pathway_index_list{1,group_i}{thresh_i} = 0;
+        %                     else
+        %                         pathway_index_list{1,group_i}{thresh_i} = gl_indices(find(input > thresh(thresh_i-1)));
+        %                     end
+                        else 
+                            pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input >= thresh(thresh_i-1) & input < thresh(thresh_i)));
+                            
+                            % e.g. drop pathways with vals < 0.5 and N fibers < 10
+                            if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(find(input >= thresh(thresh_i-1) & input < thresh(thresh_i))) < 10
+                                pathway_index_list{1,group_i}{thresh_i} = 0;
+                            else
+                                pathway_index_list{1,group_i}{thresh_i} = idx_group(input >= thresh(thresh_i-1) & input < thresh(thresh_i));
+                            end
+        
                         end
-    
-                    elseif thresh_i == length(thresh) + 1
-    
-                        pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input >= thresh(thresh_i-1)));
-                        pathway_index_list{1,group_i}{thresh_i} = idx_group(input >= thresh(thresh_i-1));
-    
-    %                     if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(pathway_index_list{1,group_i}{thresh_i}) < 10
-    %                         pathway_index_list{1,group_i}{thresh_i} = 0;
-    %                     else
-    %                         pathway_index_list{1,group_i}{thresh_i} = gl_indices(find(input > thresh(thresh_i-1)));
-    %                     end
-                    else 
-                        pathway_mean_vals{1,group_i}(thresh_i) = mean(input(input >= thresh(thresh_i-1) & input < thresh(thresh_i)));
-                        
-                        % e.g. drop pathways with vals < 0.5 and N fibers < 10
-                        if pathway_mean_vals{1,group_i}(thresh_i) < 0.5 && length(find(input >= thresh(thresh_i-1) & input < thresh(thresh_i))) < 10
-                            pathway_index_list{1,group_i}{thresh_i} = 0;
-                        else
-                            pathway_index_list{1,group_i}{thresh_i} = idx_group(input >= thresh(thresh_i-1) & input < thresh(thresh_i));
-                        end
-    
                     end
                 end
             else
                 pathway_mean_vals{1,group_i}(1) = vals{voter,side}(groups == group_i);
-                pathway_index_list{1,group_i}(1) = gl_indices(groups == group_i);
+                pathway_index_list{1,group_i}{1,1} = gl_indices(groups == group_i);
             end
+
+            % we might consider more filtering out
 
             % save as a pathway
             %fibers, idx, fourindex, ea_fibformat and fibers_glob_index
@@ -272,12 +297,13 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                 fibers_pathway = [];
                 fibers_glob_ind = [];
 
-                if length(pathway_index_list{1,group_i}) == 1
-                    fibers_pathway = fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i},:);
+                if length(pathway_index_list{1,group_i}{1,i}) == 1
+                    fibers_pathway = fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i},:);
                     fibers_pathway(:,4) = 1;
                     fibers_glob_ind = pathway_index_list{1,group_i};
                     idx_pathway(1) = size(fibers_pathway,1);
                 else
+                    % this is wrong
                     idx_pathway = zeros(length(pathway_index_list{1,group_i}{1,i}),1);
                     for j = 1:length(pathway_index_list{1,group_i}{1,i})
                         fibers_pathway = cat(1,fibers_pathway,fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i}(j),:));
