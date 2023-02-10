@@ -1,4 +1,4 @@
-function ea_export_symptoms_tracts(obj, negative_vals)
+function ea_export_symptoms_tracts(obj, symptomTractsfile)
 
 % this function creates symptom-specific tracts from fiber filtering
 % results. Those will be separated based on the spatial distribution and
@@ -26,13 +26,6 @@ end
 
 %% parameters
 
-% target coordinates that define the center of masked brain region where
-% spatial correlation will be computed
-if side == 1
-    trgt_coor = [11.7631,-13.9674,-8.85935]; % target coordinate (e.g STN), right and left
-else
-    trgt_coor = [-11.7631,-13.9674,-8.85935];
-end
 % threshold vicinity mask
 vcnty_thr = 15; % N.B: units are in mm (15 mm works well)
 
@@ -40,32 +33,24 @@ vcnty_thr = 15; % N.B: units are in mm (15 mm works well)
 sig = 1.5; 
 
 % threshold for spatial hierarchical clustering (the larger the value, the more groups you get)
-prox_cluster_threshold = 0.175; % not yet optimal
+prox_cluster_threshold = 0.17; % not yet optimal
 
 var_threshold = 0.01; % acceptable variance of val within one spatial group
-val_metric_coef = 0.75; % accepted fraction of otsu metric for val variance (1.0 is defined by the maximum number of bins)
-
-% if negative tracts, make a note in the pathway name
-% those are for soft-threshold side-effects
-negative_vals = 0;
+val_metric_coef = 0.9; % accepted fraction of otsu metric for val variance (1.0 is defined by the maximum number of bins)
 
 
 % we extract each voter and side separately
 for voter=1:size(vals,1)  % I would restrict to one voter for now
     for side = 1:size(vals,2)
 
-        gl_indices = obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}(usedidx{voter,side});
-
-        % normalized to 0-1 if necessary (apply abs if negative)
-        if min(vals{voter,side}) < 0 && max(vals{voter,side}) > 0
-            disp("Choose only positive or negative tracts!")
-            return;
-        elseif min(vals{voter,side}) < 0
-            vals{voter,side} = abs(vals{voter,side});
-        end
-
-        if max(vals{voter,side}) > 1.0
-            vals{voter,side} = vals{voter,side} / max(vals{voter,side});
+        % target coordinates that define the center of masked brain region where
+        % spatial correlation will be computed
+        if side == 1
+            prefix_side = '_rh';
+            trgt_coor = [11.7631,-13.9674,-8.85935]; % target coordinate (e.g STN), right and left
+        else
+            prefix_side = '_lh';
+            trgt_coor = [-11.7631,-13.9674,-8.85935];
         end
 
         % load cfile
@@ -79,6 +64,52 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
 
         % we can check and remove fibers that are too far away from the
         % target (but track the indices!)
+        
+        gl_indices = obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}(usedidx{voter,side});
+
+        % normalized to 0-1 if necessary (apply abs if negative)
+        if min(vals{voter,side}) < 0 && max(vals{voter,side}) > 0
+            disp("Choose only positive or negative tracts!")
+            return;
+        elseif min(vals{voter,side}) < 0
+            vals{voter,side} = abs(vals{voter,side});
+            % those are for soft-threshold side-effects
+            negative_vals = 1;
+        else
+            negative_vals = 0;
+        end
+
+        if max(vals{voter,side}) > 1.0
+            vals{voter,side} = vals{voter,side} / max(vals{voter,side});
+        end
+
+
+        % think about some standard way of symptom naming
+        if size(vals,1) > 1
+            % think about a function here for multitracts,
+            symptomName = [obj.subscore.labels{voter,1},prefix_side];
+        else
+            symptomName = [obj.responsevarlabel,prefix_side];
+        end
+    
+        % change - to _
+        symptomName = strrep(symptomName,'-','_');
+
+        % prepare output folders for pathways
+        symptomNameFolder = [filepath,filesep,symptomName(1:end-3)];
+
+        % store soft side-effect pathways separately
+        if negative_vals == 1
+            symptomNameFolder = [symptomNameFolder,'_SE'];
+        end
+
+        if side == 1 
+            if isfolder(symptomNameFolder)
+                rmdir(symptomNameFolder, 's')
+            end
+            mkdir(symptomNameFolder)
+        end        
+
 
         % create fibers and idx only from remaining fibers (with vals)
         % but remember to use gl_indices
@@ -282,14 +313,65 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                 ftr.ea_fibformat = ea_fibformat;
                 ftr.fourindex = fourindex;
 
-                filename = char(compose('pathway_side_%d_%d_val.mat',side,pathway_mean_vals{1,group_i}(i)));
+                % remove period delimiter
+                pathway_name = char(compose('pathway_side%s_group_%d_val_%.3f.mat',prefix_side,group_i,pathway_mean_vals{1,group_i}(i)));
+                if contains(pathway_name,'1.0')
+                    pathway_name = erase(pathway_name,'.0'); % remove digits after comma
+                else   
+                    pathway_name = strrep(pathway_name,'0.','0');
+                end
+
                 % you should also add the symptom name
-                save([filepath,filesep,filename],'-struct','ftr')
+                save([symptomNameFolder,filesep,pathway_name],'-struct','ftr')
             end
 
         end
 
+        % in FF, it is natural that the target activation for positive
+        % tracts is 1.0 and for negative (soft-side effect) it is 0.0
+
+        % weights are determined by pathway_mean_vals
+
+        % we iterate over sides and voters and add symptoms to the
+        % file
+        % if the symtpom is already in the dict, it will be overwritten
+
+        % load previous if available
+        if isfile(symptomTractsfile)
+            jsonText = fileread(symptomTractsfile);
+            % Convert JSON formatted text to MATLAB data types 
+            jsonDict = jsondecode(jsonText); 
+        end
+
+        for group_i = 1:size(pathway_mean_vals,2)
+            for bin_i = 1:length(pathway_mean_vals{1,group_i})
+
+                % remove period delimiter
+                pathway_name = char(compose('pathway_side%s_group_%d_val_%.3f',prefix_side,group_i,pathway_mean_vals{1,group_i}(bin_i)));
+                if contains(pathway_name,'1.0')
+                    pathway_name = erase(pathway_name,'.0'); % remove digits after comma
+                else   
+                    pathway_name = strrep(pathway_name,'0.','0');
+                end
+
+                if negative_vals == 0
+                    jsonDict.profile_dict.(genvarname(symptomName)).(genvarname(pathway_name)) = [pathway_mean_vals{1,group_i}(bin_i), 1.0];
+                else
+                    jsonDict.Soft_SE_dict.(genvarname(symptomName)).(genvarname(pathway_name)) = [pathway_mean_vals{1,group_i}(bin_i), 0.0];
+                end
+            end
+        end
+
+        % save to the same file
+        jsonText2 = jsonencode(jsonDict);
+        fid = fopen(symptomTractsfile, 'w');
+        fprintf(fid, '%s', jsonText2)
+        fclose(fid);
+
     end
 end        
+
+% at the end, we need to put all tracts together, because some will be
+% duplicated
 
 end
