@@ -23,36 +23,37 @@ dim=MNI_temp.dim;
 spatio_corr_mat=zeros(num_fibers,num_fibers);
 %spatio_corr_mat=zeros(20,20);% sample matrix for first 20 fibers
 %% Processing Fibers (3D Gaussianization)
-fib_gaus_cell=cell(num_fibers,2);
-for i=1:num_fibers
-    smp1=fiber_idxi{i,2};
-    [smp1_gauss,idxi_1]=fib_gauss(smp1,sig,trgt_coor,vcnty_thr,dim);
-    fib_gaus_cell{i,1}=smp1_gauss;
-    fib_gaus_cell{i,2}=idxi_1;
-    disp("Processing Fiber Number #"+string(i))
-end 
+fib_gaus_cell=cell(num_fibers,1);
+idxi_gaus_cell=cell(num_fibers,1);
+%tic
+parfor i=1:num_fibers
+  smp1=fiber_idxi{i,2};
+  [smp1_gauss,idxi_1]=fib_gauss(smp1,sig,trgt_coor,vcnty_thr,dim);
+  fib_gaus_cell{i,1}=smp1_gauss;
+  idxi_gaus_cell{i,1}=idxi_1;
+  disp("Processing Fiber Number #"+string(i))
+end
+%toc
 
 %% Performing Spatial Correlation (3D Gaussianization)
 for i=1:num_fibers
-    smp1=fib_gaus_cell{i,1};
-    idxi_1=fib_gaus_cell{i,2};
-    tic
-    for j=1:num_fibers
-        smp2=fib_gaus_cell{j,1};
-        idxi_2=fib_gaus_cell{j,2};
-        [C,ia,ib] = union(idxi_1,idxi_2);
-        [C_1,i_1,~]=intersect(C,idxi_1);
-        [C_2,i_2,~]=intersect(C,idxi_2);
-        
-        temp1=zeros(length(C),1);
-        temp1(i_1)=smp1;
-        temp2=zeros(length(C),1);
-        temp2(i_2)=smp2;
-        
-        rho=corr(temp1,temp2,'Type',method,'Rows','complete');
-        spatio_corr_mat(i,j)=rho;
-    end
-    toc
+  smp1=fib_gaus_cell{i,1};
+  idxi_1=idxi_gaus_cell{i,1};
+  tic
+  for j=1:num_fibers
+    smp2=fib_gaus_cell{j,1};
+    idxi_2=idxi_gaus_cell{j,1};
+    [C,ia,ib] = union(idxi_1,idxi_2);
+    [C_1,i_1,~]=intersect(C,idxi_1);
+    [C_2,i_2,~]=intersect(C,idxi_2);
+    temp1=zeros(length(C),1);
+    temp1(i_1)=smp1;
+    temp2=zeros(length(C),1);
+    temp2(i_2)=smp2;
+    rho=corr(temp1,temp2,'Type',method,'Rows','complete');
+    spatio_corr_mat(i,j)=rho;
+  end
+  toc
 end
 %ea_spatial_corr
 % Visualization
