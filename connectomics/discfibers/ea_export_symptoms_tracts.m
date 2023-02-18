@@ -38,6 +38,8 @@ prox_cluster_threshold = 0.17; % not yet optimal
 var_threshold = 0.01; % acceptable variance of val within one spatial group
 val_metric_coef = 0.9; % accepted fraction of otsu metric for val variance (1.0 is defined by the maximum number of bins)
 
+% should be passed to the function
+symptoms_list = {'Brady', 'Rigidity', 'Axial', 'Tremor'};
 
 % we extract each voter and side separately
 for voter=1:size(vals,1)  % I would restrict to one voter for now
@@ -297,7 +299,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                     fibers_pathway = fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i},:);
                     fibers_pathway(:,4) = 1;
                     fibers_glob_ind = pathway_index_list{1,group_i};
-                    idx_pathway(1) = size(fibers_pathway,1);
+                    idx_pathway = size(fibers_pathway,1);
                 else
                     idx_pathway = zeros(length(pathway_index_list{1,group_i}{1,i}),1);
                     % iterative over val bins
@@ -312,9 +314,12 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                 ftr.idx = idx_pathway;
                 ftr.ea_fibformat = ea_fibformat;
                 ftr.fourindex = fourindex;
+                % store metadata
+                ftr.glob_ind = fibers_glob_ind;
+                ftr.orig_connectome = obj.connectome;
 
                 % remove period delimiter
-                pathway_name = char(compose('pathway_side%s_group_%d_val_%.3f.mat',prefix_side,group_i,pathway_mean_vals{1,group_i}(i)));
+                pathway_name = char(compose('%s_%s_group_%d_val_%.3f.mat',symptoms_list{voter},prefix_side,group_i,pathway_mean_vals{1,group_i}(i)));
                 if contains(pathway_name,'1.0')
                     pathway_name = erase(pathway_name,'.0'); % remove digits after comma
                 else   
@@ -334,7 +339,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
 
         % we iterate over sides and voters and add symptoms to the
         % file
-        % if the symtpom is already in the dict, it will be overwritten
+        % if the tract is already in the dict, it will be overwritten
 
         % load previous if available
         if isfile(symptomTractsfile)
@@ -347,7 +352,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
             for bin_i = 1:length(pathway_mean_vals{1,group_i})
 
                 % remove period delimiter
-                pathway_name = char(compose('pathway_side%s_group_%d_val_%.3f',prefix_side,group_i,pathway_mean_vals{1,group_i}(bin_i)));
+                pathway_name = char(compose('%s_%s_group_%d_val_%.3f',symptoms_list{voter},prefix_side,group_i,pathway_mean_vals{1,group_i}(bin_i)));
                 if contains(pathway_name,'1.0')
                     pathway_name = erase(pathway_name,'.0'); % remove digits after comma
                 else   
@@ -371,7 +376,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
     end
 end        
 
-% at the end, we need to put all tracts together, because some will be
-% duplicated
+% check how many are duplicates
+% store in one folder in connectomes/dMRI_MultiTract
 
 end
