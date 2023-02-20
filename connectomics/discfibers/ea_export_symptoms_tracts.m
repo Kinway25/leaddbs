@@ -298,7 +298,7 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
                 if length(pathway_index_list{1,group_i}{1,i}) == 1
                     fibers_pathway = fibers_all(fibers_all(:,4) == pathway_index_list{1,group_i}{1,i},:);
                     fibers_pathway(:,4) = 1;
-                    fibers_glob_ind = pathway_index_list{1,group_i};
+                    fibers_glob_ind = pathway_index_list{1,group_i}{1};
                     idx_pathway = size(fibers_pathway,1);
                 else
                     idx_pathway = zeros(length(pathway_index_list{1,group_i}{1,i}),1);
@@ -376,7 +376,9 @@ for voter=1:size(vals,1)  % I would restrict to one voter for now
     end
 end        
 
-% check how many are duplicates
-% store in one folder in connectomes/dMRI_MultiTract
+% check number or repetitions and copy to MultiTract/
+% use the same name as .json file for the folder
+[~,symptomTractsfileName] = fileparts(symptomTractsfile);
+ea_connectome_from_pathways(obj, symptomTractsfileName, size(vals,1), size(vals,2), negative_vals)
 
 end
