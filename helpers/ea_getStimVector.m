@@ -44,12 +44,22 @@ for i=1:eleNum
 end
 
 %  For VC, check all sources
-if current_control(1) == 0  % both hemisphere MUST have the same mode
+if (current_control(1) == 0 && current_control(2) == 0) || (isnan(current_control(1)) && current_control(2) == 0) || (current_control(1) == 0 && isnan(current_control(2)))% both hemisphere MUST have the same mode
     numSources = 4;
     amp = nan(eleNum,numSources);   % 4 - number of sources
     for i=1:eleNum
         for j=1:numSources
             amp(i,j) = S.amplitude{i}(j);
+
+            % check grounding for active sources
+            if amp(i,j) ~= 0
+                % if any source for the electrode is grounded, then all grounded
+                stimSource = S.([sideCode, 's', num2str(j)]);
+                if stimSource.case.perc == 100
+                    Case_grounding(i) = 1;
+                end
+            end
+            
         end
     end
 else
