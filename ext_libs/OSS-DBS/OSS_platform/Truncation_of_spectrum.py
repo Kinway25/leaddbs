@@ -80,7 +80,7 @@ class Truncated_spectrum(object):
         self.Fr_octave_vector = []  #  this vector will contain octave bands defined by DBS repetition rate
         inx = 0
 
-        one_sample_10kHz = False
+        one_sample_10kHz = True
         if one_sample_10kHz == True:
             self.trunc_param = 1.0
 

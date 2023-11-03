@@ -154,6 +154,7 @@ if isempty(addchar) % no s, no k
         AllX=obj.results.(ea_conn2connid(obj.connectome)).connval;
 return
 end
+
 try
     AllX=obj.results.(ea_conn2connid(obj.connectome)).(ea_conn2connid(lower(obj.cvmask))).(addchar).connval;
 catch

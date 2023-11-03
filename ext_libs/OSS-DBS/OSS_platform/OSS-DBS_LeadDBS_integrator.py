@@ -46,7 +46,7 @@ def get_input_from_LeadDBS(settings_location, index_side, cluster_run=False):  #
         'Stim_side': 0,  # 0 - rh, 1 - lh
         'Neuron_model_array_prepared': 0,
         'stretch': 1.0,
-        'number_of_processors': 0,
+        'number_of_processors': 4,
         'Approximating_Dimensions': [80.0, 80.0, 80.0],
         'Aprox_geometry_center': [0.0, 0.0, 0.0],
         'el_order': 2,
@@ -282,9 +282,11 @@ if __name__ == '__main__':
                         ['xterm', '-e', 'python3', 'GUI_tree_files/AppUI.py', path_to_patient, str(side),
                          str(interactive_mode), str(patient_folder), str(StimSets)])
                 else:
+                    dir_code = os.path.dirname(os.getcwd())  # OSS-DBS folder to be mount, NOT OSS_platform folder
                     output = subprocess.run(
-                        ['xterm', '-e', 'python3', 'GUI_tree_files/AppUI.py', path_to_patient, str(side),
-                         str(interactive_mode), str(patient_folder), str(StimSets)])
+                        ['docker', 'run', '-e', 'PATIENTDIR', '-e', 'TZ', '--volume', dir_code + ':/opt/OSS-DBS',
+                         '--volume', path_to_patient + ':/opt/Patient',
+                         '-it', '--rm', 'ningfei/oss-dbs:custom', 'python3', 'Launcher_OSS_lite.py', '1'])
             elif sys.platform == 'darwin':
                 open_terminal = 'tell application "Terminal" to do script "cd \'' + oss_dbs_folder + '\';'
                 open_gui = ' '.join(

@@ -1,105 +1,4 @@
-function AUC = ea_logit_regression(Ihat_train, Ihat, Improvement, training, test, gpatsel, obj)
-
-% Fit logit model, compute ROC and find the optimal threshold.
-% Compute confustion matrix for the test set (can be the same as training)
-
-disp_regression_plots = 0;
-
-% if Ihat_train was not provided, then we have in-sample analysis
-if Ihat_train == 0
-    Ihat_train = Ihat(training);
-end
-
-% first, we fit a logit function for our binary prediction
-mdl = fitglm(Ihat_train,Improvement(training),'Distribution','binomial','Link','logit');
-
-
-% second, we run ROC curve analysis
-scores = mdl.Fitted.Probability;
-[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
-if disp_regression_plots
-    figure, plot(X,Y, 'k', 'linew', 1.5)
-    set(gcf,'color','w');
-    hold on
-    plot(OPTROCPT(1),OPTROCPT(2),'ro', 'MarkerSize',10)
-    xlabel('False positive rate') 
-    ylabel('True positive rate')
-    txt = ['AUC: ' num2str(AUC)];
-    text(0.7,0.1,txt)
-    title('ROC for Classification by Logistic Regression')
-end
-
-% optimal threshold on the classifier
-scores_thresh = T((X==OPTROCPT(1))&(Y==OPTROCPT(2)));
-
-% plot logit fit for training
-vec_val = min(Ihat_train):1:max(Ihat_train);
-if disp_regression_plots
-    figure
-    set(gcf,'color','w');
-    lims=[min(Ihat_train)-0.1*(max(Ihat_train)-min(Ihat_train)), max(Ihat_train)+0.1*(max(Ihat_train)-min(Ihat_train))];
-    subplot(4,1,1)
-    subtitle('Response');
-    col=ea_color_wes('lifeaquatic');
-    g=ea_raincloud_plot(Ihat_train(Improvement(training)==1)','color',col(3,:),'box_on',1);
-    a1=gca;
-    set(a1,'ytick',[])
-    set(gca, 'xlim', lims)
-    a1.YLabel.String='Response';
-    a1.XLabel.String='Fiberscore';
-    a1.Box='off';
-    title('Logistic Regression for Training Cohort')
-
-
-    subplot(4,1,[2 3])
-    plot(vec_val', predict(mdl,vec_val'),'k', 'linew', 1.5)
-    xlabel('Fiberscore'), ylabel('Response')
-    set(gca, 'xlim', lims); box off
-    %plot(vec_val', predict(mdl,vec_val'),Ihat_train,Improvement(training),'s')
-    %plot(Ihat_av,Improvement,'s')
-    
-    subplot(4,1,4)
-    subtitle('Control');
-    col=ea_color_wes('lifeaquatic');
-    g=ea_raincloud_plot(Ihat_train(Improvement(training)==0)','color',col(1,:),'box_on',1);
-    a1=gca;
-    set(a1,'ytick',[])
-    set(gca, 'xlim', lims)
-    a1.YLabel.String='Control';
-    a1.XLabel.String='Fiberscore';
-    a1.Box='off';
-end
-
-
-% prediction for test based on the logit model
-scores_test = predict(mdl,Ihat(test));
-Ihat_prediction = scores_test > scores_thresh;
-
-% get the confussion matrix (this can be done on the test set now)
-
-if disp_regression_plots
-    figure
-    cm = confusionchart(logical(Improvement(test)), Ihat_prediction);
-    set(gcf,'color','w');
-    
-    tp = sum((Ihat_prediction == 1) & (Improvement(test) == 1));
-    fp = sum((Ihat_prediction == 1) & (Improvement(test) == 0));
-    tn = sum((Ihat_prediction == 0) & (Improvement(test) == 0));
-    fn = sum((Ihat_prediction == 0) & (Improvement(test) == 1));
-    
-    sensitivity = tp/(tp + fn);  % TPR
-    specificity = tn/(tn + fp);  % TNR
-    
-    cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity)];
-end
-
-
-% correlation plots for each patient
-
-% vals as contrast of two protocols
-%amp_patients = cell(1, 100);  % store amps for each patient
-%counter = 1;
-I_test = Improvement(test);
+function ea_get_binary_prediction_plots(obj, N_resp, gpatsel, Ihat_prediction, I_test)
 
 pt_i = 1;
 difs = -1*ones(100,1);
@@ -109,10 +8,7 @@ corr_vals_p = zeros(100,1);
 pt_N = 1;
 pt_K = 1;
 
-depths_max = -1*ones(39,1);
-
 lost_prediction = 0;
-
 
 while pt_i <= length(gpatsel)-1
     temp=strsplit(obj.M.patient.list{gpatsel(pt_i)},'_');
@@ -178,7 +74,7 @@ while pt_i <= length(gpatsel)-1
 %                     end
 
                     amps_side = [amps_side, amp];
-                    scores = [scores, scores_test(pt_j)];
+                    %scores = [scores, scores_test(pt_j)];
                     %disp(trajDepth2)
                     if contains(trajDepth2, '.nii')
                         depths = [depths, str2num(trajDepth2(end-6:end-4))];
@@ -202,7 +98,7 @@ while pt_i <= length(gpatsel)-1
                 if Ihat_prediction(pt_j) == 1 && ~any(contains(amp_pred_checked, trajDepth2))
     
                     amps_predicted_side = [amps_predicted_side, amp];  % predicted amps for response
-                    scores_predicted = [scores_predicted, scores_test(pt_j)];
+                    %scores_predicted = [scores_predicted, scores_test(pt_j)];
     
                     amp_pred_checked =  [amp_pred_checked,trajDepth2];
                     %found_pred_amp = 1;
@@ -324,12 +220,26 @@ small_r =  corr_vals_r(corr_vals_r<0.33);
 moderate_r =  corr_vals_r(corr_vals_r>0.33 & corr_vals_r<0.66);
 high_r =  corr_vals_r(corr_vals_r>0.66);
 
-X = categorical({'R<0.33', '0.33<R<0.66', 'R>0.66'});
-X = reordercats(X,{'R<0.33', '0.33<R<0.66', 'R>0.66'});
+%disp("depths_max")
+
+%figure()
+%histogram(depths_max,9)
+
+corr_vals_r(pt_N:end) = [];
+difs(pt_N:end) = [];
+difs_mean(pt_N:end) = [];
+
+% make bar plot of max errors and correlations
+small_r =  corr_vals_r(corr_vals_r<0.33);
+moderate_r =  corr_vals_r(corr_vals_r>0.33 & corr_vals_r<0.66);
+high_r =  corr_vals_r(corr_vals_r>0.66);
+
+X = categorical({'Small R', 'Moderate R', 'High R'});
+X = reordercats(X,{'Small R', 'Moderate R', 'High R'});
 Y = [length(small_r), length(moderate_r), length(high_r)];
 figure()
 bar(X,Y)
-title('Fiber Model: Spearman Predicted vs Actual Threshold')
+title('Ampl. Model: Spearman Predicted vs Actual Threshold')
 
 
 difs_1mA = difs(difs<=1);
@@ -342,7 +252,8 @@ X = reordercats(X,{'<=1 mA', '<=2 mA', '>2 mA'});
 Y = [length(difs_1mA), length(difs_2mA), length(difs_2_plus_mA)];
 figure()
 bar(X,Y)
-title('Fiber Model: Max Patient Error')
+title('Ampl. Model: Max Patient Error')
+
 
 difs_mean_1mA = difs_mean(difs_mean<=1);
 difs_mean_2mA = difs_mean(1<difs_mean & difs_mean<=2);
@@ -354,24 +265,4 @@ X = reordercats(X,{'<=1 mA', '<=2 mA', '>2 mA'});
 Y = [length(difs_mean_1mA), length(difs_mean_2mA), length(difs_mean_2_plus_mA)];
 figure()
 bar(X,Y)
-title('Fiber Model: Mean Patient Error')
-
-
-% % plot for Jan
-% X = categorical({'<=1 mA', '<=2 mA', '>2 mA'});
-% Y = [0, 6, 26 ;length(difs_1mA), length(difs_2mA), length(difs_2_plus_mA)];
-% figure()
-% bar(X,Y)
-% title('Fiber Model: Max in Patient Error')
-% legend({'Amplitude Model','Fiber Model'},...
-%     'Location','northwest')
-% 
-% X = categorical({'<=1 mA', '<=2 mA', '>2 mA'});
-% X = reordercats(X,{'<=1 mA', '<=2 mA', '>2 mA'});
-% Y = [9, 27, 6;length(difs_mean_1mA), length(difs_mean_2mA), length(difs_mean_2_plus_mA)];
-% figure()
-% bar(X,Y)
-% title('Fiber Model: Mean in Patient Error')
-% legend('Amplitude Model','Fiber Model')
-
-end
+title('Ampl. Model: Mean Patient Error')

@@ -138,7 +138,6 @@ classdef ea_disctract < handle
                 if isfield(obj.M,'pseudoM')
                     obj.allpatients = obj.M.ROI.list;
                     obj.patientselection = 1:length(obj.M.ROI.list);
-                    obj.M = ea_map_pseudoM(obj.M);
                     obj.M.root = [fileparts(datapath),filesep];
                     obj.M.patient.list = cell(size(obj.M.ROI.list,1), 1);
                     for i = 1:size(obj.M.ROI.list,1)
@@ -215,86 +214,166 @@ classdef ea_disctract < handle
             end
         end
         function calculate(obj)
-
-            switch obj.connectivity_type
-                case 2 % PAM
-                    obj.M.vatmodel = 'OSS-DBS (Butenko 2020)';
-                otherwise % Stim. volumes
-                    obj.M.vatmodel= 'SimBio/FieldTrip (see Horn 2017)';
-            end
-
-            % check that this has not been calculated before:
-            if ~isempty(obj.results) % something has been calculated
-                if isfield(obj.results,ea_conn2connid(obj.connectome))
-                    answ=questdlg('This has already been calculated. Are you sure you want to re-calculate everything?','Recalculate Results','No','Yes','No');
-                    if ~strcmp(answ,'Yes')
-                        return
-                    end
+            
+            num_jitters = 1;
+            for jit_i = 1:num_jitters
+                switch obj.connectivity_type
+                    case 2 % PAM
+                        obj.M.vatmodel = 'OSS-DBS (Butenko 2020)';
+                    otherwise % Stim. volumes
+                        obj.M.vatmodel= 'SimBio/FieldTrip (see Horn 2017)';
                 end
-            end
-
-            % if multi_pathways = 1, assemble cfile from multiple
-            % pathway.dat files in dMRI_MultiTract/Connectome_name/
-            % stores the result in the LeadGroup folder
-            % also merges fiberActivation_.._.mat and stores them in
-            % stimulation folders
-            if obj.multi_pathways == 1
-                [cfile, obj.map_list, obj.pathway_list] = ea_discfibers_merge_pathways(obj);
-            else
-                cfile = [ea_getconnectomebase('dMRI'), obj.connectome, filesep, 'data.mat'];
-            end
-
-            % if multi_pathway = 1, use the adjacency defined for
-            % merged_pathways.mat
-            if obj.use_adjacency
+    
+%                 % check that this has not been calculated before:
+%                 if ~isempty(obj.results) % something has been calculated
+%                     if isfield(obj.results,ea_conn2connid(obj.connectome))
+%                         answ=questdlg('This has already been calculated. Are you sure you want to re-calculate everything?','Recalculate Results','No','Yes','No');
+%                         if ~strcmp(answ,'Yes')
+%                             return
+%                         end
+%                     end
+%                 end
+    
+                % if multi_pathways = 1, assemble cfile from multiple
+                % pathway.dat files in dMRI_MultiTract/Connectome_name/
+                % stores the result in the LeadGroup folder
+                % also merges fiberActivation_.._.mat and stores them in
+                % stimulation folders
                 if obj.multi_pathways == 1
-                    connectome_folder = [ea_getconnectomebase('dMRI_multitract'), obj.connectome];
-                    ADJ_connectome_path = [connectome_folder,filesep,'merged_pathways_ADJ.mat'];
-                    obj.ADJ = load(ADJ_connectome_path); % but we need to precompute (ourselves!)
+                    [cfile, obj.map_list, obj.pathway_list] = ea_discfibers_merge_pathways(obj);
                 else
-                    [connectome_folder,name,~] = fileparts(cfile);
-                    ADJ_connectome_path = [connectome_folder,filesep,name,'_ADJ.mat'];
+                    cfile = [ea_getconnectomebase('dMRI'), obj.connectome, filesep, 'data.mat'];
                 end
-
-                try
-                    obj.ADJ = load(ADJ_connectome_path);
-                catch
-                    disp('The adjacency matrix is missing for the chosen connectome')
-                    disp('Please, pre-compute it using ea_compute_adj_matrix.m and store the file in the connectome folder')
-                    obj.ADJ = false;
-                    obj.use_adjacency = false;
-                end
-            else
-                obj.ADJ = false;
-            end
-
-            switch obj.connectivity_type
-                case 2    % if PAM, then just extracts activation states from fiberActivation.mat
-                    pamlist = ea_discfibers_getpams(obj);
-                    [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam(pamlist, obj, cfile);
-                    obj.results.(ea_conn2connid(obj.connectome)).('PAM_Ttest').fibsval = fibsvalBin;
-                    obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM = connFiberInd;
-                    obj.results.(ea_conn2connid(obj.connectome)).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
-                otherwise     % check fiber recruitment via intersection with VTA
-                    if isfield(obj.M,'pseudoM')
-                        vatlist = obj.M.ROI.list;
+    
+                % if multi_pathway = 1, use the adjacency defined for
+                % merged_pathways.mat
+                if obj.use_adjacency
+                    if obj.multi_pathways == 1
+                        connectome_folder = [ea_getconnectomebase('dMRI_multitract'), obj.connectome];
+                        ADJ_connectome_path = [connectome_folder,filesep,'merged_pathways_ADJ.mat'];
+                        obj.ADJ = load(ADJ_connectome_path); % but we need to precompute (ourselves!)
                     else
-                        vatlist = ea_discfibers_getvats(obj);
+                        [connectome_folder,name,~] = fileparts(cfile);
+                        ADJ_connectome_path = [connectome_folder,filesep,name,'_ADJ.mat'];
                     end
-                    ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
+    
+                    try
+                        obj.ADJ = load(ADJ_connectome_path);
+                    catch
+                        disp('The adjacency matrix is missing for the chosen connectome')
+                        disp('Please, pre-compute it using ea_compute_adj_matrix.m and store the file in the connectome folder')
+                        obj.ADJ = false;
+                        obj.use_adjacency = false;
+                    end
+                else
+                    obj.ADJ = false;
+                end
+    
+                switch obj.connectivity_type
+                    case 2    % if PAM, then just extracts activation states from fiberActivation.mat
 
-                    [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell,  connFiberInd, totalFibers] = ea_discfibers_calcvals(vatlist, cfile, obj.calcthreshold);
-                    obj.results.(ea_conn2connid(obj.connectome)).('VAT_Ttest').fibsval = fibsvalBin;
-                    obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT = connFiberInd; % old ff files do not have these data and will fail when using pathway atlases
-                    obj.results.(ea_conn2connid(obj.connectome)).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
+
+                        pamlist = ea_discfibers_getpams(obj);
+                        [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam(pamlist, obj, cfile);
+                        obj.results.(ea_conn2connid(obj.connectome)).('PAM_Ttest').fibsval = fibsvalBin;
+                        obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM = connFiberInd;
+                        obj.results.(ea_conn2connid(obj.connectome)).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
+
+                    
+                    
+                    
+                    
+                    otherwise     % check fiber recruitment via intersection with VTA
+                        if isfield(obj.M,'pseudoM')
+    
+                            vatlist = obj.M.ROI.list;
+%                             numPatient = length(obj.allpatients);
+%                             vatlist = cell(numPatient*2,2);
+%                              for i = 1:numPatient
+%                                  vatlist{i,1} = obj.M.ROI.list{i,1};
+%                                  vatlist{i,2} = obj.M.ROI.list{i,2};
+%                                  %pt_ID = char(string(i));
+%                                  %copyfile(vatlist{i,1}, ['/media/konstantin/Konstantin/SH_STN/CervFace/efield_right_',pt_ID,'.nii'])
+%                                  %copyfile(vatlist{i,2}, ['/media/konstantin/Konstantin/SH_STN/CervFace/efield_left_',pt_ID,'.nii'])
+% 
+%                              end
+% %                             for i = numPatient+1 : numPatient*2
+% %                                 vatlist{i,1} = ['/home/konstantin/Documents/Data/STN_Dyst/efields_DYT/','fl_efield_left_',char(string(i-numPatient)),'.nii'];
+% %                                 vatlist{i,2} = ['/home/konstantin/Documents/Data/STN_Dyst/efields_DYT/','fl_efield_right_',char(string(i-numPatient)),'.nii'];
+% %                             end
+% 
+%                              for i = numPatient+1 : numPatient*2
+%                                  %pt_ID = char(string(i));
+%                                  vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_left.nii'];
+%                                  %copyfile(vatlist{i,1}, ['/media/konstantin/Konstantin/SH_STN/CervFace/efield_right_',pt_ID,'.nii'])
+% 
+%                                  vatlist{i,2} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_right.nii'];
+%                                  %copyfile(vatlist{i,2}, ['/media/konstantin/Konstantin/SH_STN/CervFace/efield_left_',pt_ID,'.nii'])
+%                              end
+
+
+                            
+
+
+    %                         for i = 1:size(vatlist,1)
+    %                             vatlist{i,1} = [obj.M.ROI.list{i,1}(1:32),'all_MNI_new',obj.M.ROI.list{i,1}(40:end)];
+    %                         end
+
+%                              % field projections
+%                              for i = 1:numPatient
+% 
+%                                 temp2=strsplit(obj.M.patient.list{i},'_');
+%                                 pt_ID2 = temp2{2}(5:end); 
+%                                 if contains(obj.M.patient.list{i}, '_fl.')
+%                                     AmpTrajDepthSide = [temp2{end-1}(4:end),'_lh'];
+%                                 else
+%                                     AmpTrajDepth2Side = temp2{end}(4:end);
+%                                 end
+%                                 side2 = temp2{3};
+% 
+%                                  vatlist{i,1} = [obj.M.ROI.list{i}(1:32),pt_ID2,];
+%                              end
+
+    
+    
+    
+%                             numPatient = length(obj.allpatients);
+%                             vatlist = cell(numPatient*2,2);
+%                              for i = 1:numPatient
+%                                  vatlist{i,1} = obj.M.ROI.list{i,1};
+%                                  vatlist{i,2} = obj.M.ROI.list{i,2};
+%                              end
+%                              
+%                              for i = numPatient+1 : numPatient*2
+%                                  vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_left.nii'];
+%                                  vatlist{i,2} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_right.nii'];
+%                              end
+                        else
+                            vatlist = ea_discfibers_getvats(obj);
+                        end
+                        ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
+    
+                        [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell,  connFiberInd, totalFibers] = ea_discfibers_calcvals(vatlist, cfile, obj.calcthreshold, obj.map_list);
+                        obj.results.(ea_conn2connid(obj.connectome)).('VAT_Ttest').fibsval = fibsvalBin;
+                        obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT = connFiberInd; % old ff files do not have these data and will fail when using pathway atlases
+                        obj.results.(ea_conn2connid(obj.connectome)).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
+                end
+    
+                obj.results.(ea_conn2connid(obj.connectome)).('spearman_sum').fibsval = fibsvalSum;
+                obj.results.(ea_conn2connid(obj.connectome)).('spearman_mean').fibsval = fibsvalMean;
+                obj.results.(ea_conn2connid(obj.connectome)).('spearman_peak').fibsval = fibsvalPeak;
+                obj.results.(ea_conn2connid(obj.connectome)).('spearman_5peak').fibsval = fibsval5Peak;
+                obj.results.(ea_conn2connid(obj.connectome)).('plainconn').fibsval = fibsvalBin;
+                obj.results.(ea_conn2connid(obj.connectome)).fibcell = fibcell;
+                
+    
+                %we can call calculate in a loop and name the
+                % ExternalModelFile correspondingly
+                %ExtModelFile = [obj.M.root,'jittered_model',num2str(jit_i),'.mat'];
+                %ExtModelFile = [obj.M.root,'orig_model.mat'];
+                %ea_save_fibscore_model(obj, ExtModelFile)
             end
 
-            obj.results.(ea_conn2connid(obj.connectome)).('spearman_sum').fibsval = fibsvalSum;
-            obj.results.(ea_conn2connid(obj.connectome)).('spearman_mean').fibsval = fibsvalMean;
-            obj.results.(ea_conn2connid(obj.connectome)).('spearman_peak').fibsval = fibsvalPeak;
-            obj.results.(ea_conn2connid(obj.connectome)).('spearman_5peak').fibsval = fibsval5Peak;
-            obj.results.(ea_conn2connid(obj.connectome)).('plainconn').fibsval = fibsvalBin;
-            obj.results.(ea_conn2connid(obj.connectome)).fibcell = fibcell;
         end
 
 
@@ -525,6 +604,10 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
+
+            %threshold_STN_bin = obj.setselections{1,27}(1,obj.patientselection);
+            %,[training_shell, test_all] = Kfold_for_shell(obj,patientsel,threshold_STN_bin);
+
             switch obj.multitractmode
                 case 'Split & Color By PCA'
                     if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -590,9 +673,14 @@ classdef ea_disctract < handle
                     end
                 end
 
+                % this is in subcohort space
                 if isobject(cvp)
                     training = cvp.training(c);
                     test = cvp.test(c);
+
+                    %training = training_shell(:,c);
+                    %test = test_all(:,c);
+
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -656,17 +744,47 @@ classdef ea_disctract < handle
             end
 
             % check if binary variable
+
+            %Improvement(isnan(Improvement)) = 0.0;
+
             if all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1
                 % average across sides. This might be wrong for capsular response.
                 Ihat_av_sides = ea_nanmean(Ihat,2);
 
                 if isobject(cvp)
-                    % In-sample
-                    AUC = ea_logit_regression(0 ,Ihat_av_sides, Improvement, 1:size(Improvement,1), 1:size(Improvement,1));
+
+                    % fit logit in k-fold
+                    % this will create a lot of plots!
+                    if cvp.NumTestSets ~= 0
+                        
+                        Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (cvp.NumTestSets, N, sides)
+                        AUC = zeros(cvp.NumTestSets,1);
+                        for c=1:cvp.NumTestSets
+                            if isobject(cvp)
+                                %training = cvp.training(c);
+                                %test = cvp.test(c);
+                                training = training_shell(:,c);
+                                test = test_all(:,c);
+
+                            elseif isstruct(cvp)
+                                training = cvp.training{c};
+                                test = cvp.test{c};
+                            end
+                            % only choose real test patients
+                            patientsel_test = patientsel(test);
+
+                            AUC(c) = ea_logit_regression(Ihat_train_global_av_sides(c,training) ,Ihat_av_sides, Improvement, training, test, patientsel_test, obj);
+                        end
+
+                        disp(AUC)
+                    else
+                        % In-sample
+                        AUC = ea_logit_regression(0 ,Ihat_av_sides, Improvement, 1:size(Improvement,1), 1:size(Improvement,1));
+                    end
                 elseif isstruct(cvp)
                     % actual training and test
                     Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
-                    AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, Improvement, training, test);
+                    AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, Improvement, training, test, patientsel, obj);
                 end
 
             end
@@ -700,11 +818,11 @@ classdef ea_disctract < handle
                             end
                         end
 
-                        figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
-                        imagesc(triu(r_Ihat)); % Display correlation matrix as an image
-                        title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
-                        colormap('bone');
-                        cb = colorbar;
+%                         figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
+%                         imagesc(triu(r_Ihat)); % Display correlation matrix as an image
+%                         title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
+%                         colormap('bone');
+%                         cb = colorbar;
                         % set(cb)
 
                     end
@@ -732,6 +850,12 @@ classdef ea_disctract < handle
                     h=ea_corrbox(Improvement,Predicted_scores,'permutation',{['Disc. Fiber prediction ',plotName],empiricallabel,pred_label, plotName, LM_values_slope, LM_values_intercept},groups_nested);
                 end
             end
+
+%             [h,p] = ttest(Improvement(1:35),Improvement(36:end));
+%             Imp_dif = Improvement(1:35) - Improvement(36:end);
+%             figure
+%             histogram(Imp_dif*100, 20)
+%             xlabel('LS - RS Improvement Difference for Tremor')
 
             if obj.doactualprediction % repeat loops partly to fit to actual response variables:
 
@@ -771,6 +895,15 @@ classdef ea_disctract < handle
 
                         predictor_test = squeeze(ea_nanmean(Ihat,2));
                         %predictor=squeeze(ea_nanmean(Ihat_voters,2));
+
+
+                        % check which patients are shared
+                        for pt_i = 1:size(test,2)
+                            if test(pt_i) == 1 && ~isnan(useI(pt_i))
+                                disp(obj.M.patient.list{patientsel(pt_i)})
+                                disp(useI(pt_i))
+                            end
+                        end
 
                         covariates=[];
                         for cv = 1:length(obj.covars)
@@ -1040,7 +1173,8 @@ classdef ea_disctract < handle
         function draw(obj,vals,fibcell,usedidx) %for cv live visualize
             %function draw(obj,vals,fibcell)
 
-            % re-define plainconn (since we do not store it)
+            % re-define plainconn (since we do not 
+            % store it)
             try
                 if obj.connectivity_type == 2
                     obj.results.(ea_conn2connid(obj.connectome)).('plainconn').fibsval = obj.results.(ea_conn2connid(obj.connectome)).('PAM_Ttest').fibsval;
@@ -1062,10 +1196,11 @@ classdef ea_disctract < handle
             if obj.switch_connectivity == 1
                 if obj.multi_pathways == 1
                     [filepath,name,ext] = fileparts(obj.leadgroup);
-                    cfile = [filepath,filesep,'merged_pathways.mat'];
+                    cfile = [filepath,filesep,obj.connectome,filesep,'merged_pathways.mat'];
                 else
                     cfile = [ea_getconnectomebase('dMRI'), obj.connectome, filesep, 'data.mat'];
                 end
+                
                 load(cfile, 'fibers', 'idx');
                 %disp('Conn. Type:')
                 %disp(ea_method2methodid(obj))
@@ -1093,7 +1228,7 @@ classdef ea_disctract < handle
                 if ~isfield(obj.results.(ea_conn2connid(obj.connectome)),'totalFibers')
                     if obj.multi_pathways == 1
                         [filepath,~,~] = fileparts(obj.leadgroup);
-                        cfile = [filepath,filesep,'merged_pathways.mat'];
+                        cfile = [filepath,filesep,obj.connectome,filesep,'merged_pathways.mat'];
                     else
                         cfile = [ea_getconnectomebase('dMRI'), obj.connectome, filesep, 'data.mat'];
                     end
@@ -1204,10 +1339,13 @@ classdef ea_disctract < handle
             if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
                 %disp("number of drawn fibers per pathway")
                 num_per_path = cell(1, 2); % with obj.map_list, rates can be computed
-                for side = 1:length(usedidx)
+
+                
+
+                for side = 1%:size(usedidx,2)
                     num_per_path{side} = zeros(1,length(obj.map_list));
-                    if length(usedidx{side})
-                        for inx = 1:length(usedidx{side})
+                    if length(usedidx{1,side})  % check the first (or only) voter
+                        for inx = 1:length(usedidx{1,side})
                             % check the nearest via the difference, if positive, take one before
                             % I think we can easily add plainconnectivity
                             % here (just try to disable if check)

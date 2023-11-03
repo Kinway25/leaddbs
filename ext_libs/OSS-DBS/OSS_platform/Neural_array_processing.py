@@ -631,11 +631,11 @@ class Neuron_array(object):
                 del Array_coord
             hf.close()
 
-        from CSF_refinement_new import get_CSF_voxels  # in the vicinity of the neuron array
-        if self.Type != 'Imported':
-            voxel_array_CSF_shifted = get_CSF_voxels(MRI_param, Array_coord, self.Type)
-        else:
-            voxel_array_CSF_shifted = get_CSF_voxels(MRI_param, List_of_placed, self.Type)
+        # from CSF_refinement_new import get_CSF_voxels  # in the vicinity of the neuron array
+        # if self.Type != 'Imported':
+        #     voxel_array_CSF_shifted = get_CSF_voxels(MRI_param, Array_coord, self.Type)
+        # else:
+        #     voxel_array_CSF_shifted = get_CSF_voxels(MRI_param, List_of_placed, self.Type)
 
         points_csf, points_encap, points_outside = (0, 0, 0)
 
@@ -701,34 +701,35 @@ class Neuron_array(object):
                         Array_coord, inx, __ = self.mark_to_remove(Array_coord,
                                                                    inx)  # will also shift inx to the end of the neuron
                     else:
-                        # finally checks whether the neuron compartment is inside the CSF voxel
-                        check1_1 = (voxel_array_CSF_shifted[:, 0] - Array_coord[inx, 0] <= MRI_param.voxel_dims[0])
-                        check1_2 = (voxel_array_CSF_shifted[:, 1] - Array_coord[inx, 1] <= MRI_param.voxel_dims[1])
-                        check1_3 = (voxel_array_CSF_shifted[:, 2] - Array_coord[inx, 2] <= MRI_param.voxel_dims[2])
-                        check2_1 = (voxel_array_CSF_shifted[:, 0] >= Array_coord[
-                            inx, 0])  # we could just check the sign
-                        check2_2 = (voxel_array_CSF_shifted[:, 1] >= Array_coord[inx, 1])
-                        check2_3 = (voxel_array_CSF_shifted[:, 2] >= Array_coord[inx, 2])
+                        # # finally checks whether the neuron compartment is inside the CSF voxel
+                        # check1_1 = (voxel_array_CSF_shifted[:, 0] - Array_coord[inx, 0] <= MRI_param.voxel_dims[0])
+                        # check1_2 = (voxel_array_CSF_shifted[:, 1] - Array_coord[inx, 1] <= MRI_param.voxel_dims[1])
+                        # check1_3 = (voxel_array_CSF_shifted[:, 2] - Array_coord[inx, 2] <= MRI_param.voxel_dims[2])
+                        # check2_1 = (voxel_array_CSF_shifted[:, 0] >= Array_coord[
+                        #     inx, 0])  # we could just check the sign
+                        # check2_2 = (voxel_array_CSF_shifted[:, 1] >= Array_coord[inx, 1])
+                        # check2_3 = (voxel_array_CSF_shifted[:, 2] >= Array_coord[inx, 2])
+                        #
+                        # check3 = np.logical_and(np.logical_and(check1_1, check2_1),
+                        #                         np.logical_and(np.logical_and(check1_2, check2_2),
+                        #                                        np.logical_and(check1_3, check2_3)))
+                        # a = np.where((check3 == (True)))
+                        # if str(a) != '(array([], dtype=int64),)':
+                        #     points_csf = points_csf + 1
+                        #
+                        #     Array_coord, inx, i_neuron_csf = self.mark_to_remove(Array_coord,
+                        #                                                          inx)  # will also shift inx to the end of the neuron
+                        #     self.neurons_idx_csf.append(i_neuron_csf)
+                        # else:
 
-                        check3 = np.logical_and(np.logical_and(check1_1, check2_1),
-                                                np.logical_and(np.logical_and(check1_2, check2_2),
-                                                               np.logical_and(check1_3, check2_3)))
-                        a = np.where((check3 == (True)))
-                        if str(a) != '(array([], dtype=int64),)':
-                            points_csf = points_csf + 1
-
-                            Array_coord, inx, i_neuron_csf = self.mark_to_remove(Array_coord,
-                                                                                 inx)  # will also shift inx to the end of the neuron
-                            self.neurons_idx_csf.append(i_neuron_csf)
-                        else:
-                            inx += 1
+                        inx += 1
 
             logging.critical(
                 "Neurons in CSF, encapsulation layer (and floating conductors) and outside (and intersecting with the electrode): {0}, {1}, {2}".format(
                     points_csf, points_encap, points_outside))
             inx = 0
 
-            del voxel_array_CSF_shifted
+            #del voxel_array_CSF_shifted
 
             Array_coord = Array_coord[~np.all(Array_coord == -100000000.0,
                                               axis=1)]  # deletes all marked (in self.mark_to_remove with -100000000.0) enteries
@@ -799,27 +800,27 @@ class Neuron_array(object):
                                 Array_coord, inx, __ = self.mark_to_remove(Array_coord, inx,
                                                                            nsegm=self.pattern['num_segments'][i])
                             else:  # finally checks whether the neuron compartment is inside the CSF voxel
-                                check1_1 = (voxel_array_CSF_shifted[:, 0] - Array_coord[inx, 0] <= MRI_param.voxel_dims[0])
-                                check1_2 = (voxel_array_CSF_shifted[:, 1] - Array_coord[inx, 1] <= MRI_param.voxel_dims[1])
-                                check1_3 = (voxel_array_CSF_shifted[:, 2] - Array_coord[inx, 2] <= MRI_param.voxel_dims[2])
-                                check2_1 = (voxel_array_CSF_shifted[:, 0] >= Array_coord[inx, 0])
-                                check2_2 = (voxel_array_CSF_shifted[:, 1] >= Array_coord[inx, 1])
-                                check2_3 = (voxel_array_CSF_shifted[:, 2] >= Array_coord[inx, 2])
-                                # print(check1_1)
-
-                                check3 = np.logical_and(np.logical_and(check1_1, check2_1),
-                                                        np.logical_and(np.logical_and(check1_2, check2_2),
-                                                                       np.logical_and(check1_3, check2_3)))
-                                a = np.where((check3 == (True)))
-                                if str(a) != '(array([], dtype=int64),)':
-                                    points_csf += 1
-                                    Array_coord, inx, i_neuron_csf = self.mark_to_remove(Array_coord, inx,
-                                                                                         nsegm=
-                                                                                         self.pattern['num_segments'][
-                                                                                             i])
-                                    sublist_idx_csf.append(i_neuron_csf)
-                                else:
-                                    inx += 1
+                                # check1_1 = (voxel_array_CSF_shifted[:, 0] - Array_coord[inx, 0] <= MRI_param.voxel_dims[0])
+                                # check1_2 = (voxel_array_CSF_shifted[:, 1] - Array_coord[inx, 1] <= MRI_param.voxel_dims[1])
+                                # check1_3 = (voxel_array_CSF_shifted[:, 2] - Array_coord[inx, 2] <= MRI_param.voxel_dims[2])
+                                # check2_1 = (voxel_array_CSF_shifted[:, 0] >= Array_coord[inx, 0])
+                                # check2_2 = (voxel_array_CSF_shifted[:, 1] >= Array_coord[inx, 1])
+                                # check2_3 = (voxel_array_CSF_shifted[:, 2] >= Array_coord[inx, 2])
+                                # # print(check1_1)
+                                #
+                                # check3 = np.logical_and(np.logical_and(check1_1, check2_1),
+                                #                         np.logical_and(np.logical_and(check1_2, check2_2),
+                                #                                        np.logical_and(check1_3, check2_3)))
+                                # a = np.where((check3 == (True)))
+                                # if str(a) != '(array([], dtype=int64),)':
+                                #     points_csf += 1
+                                #     Array_coord, inx, i_neuron_csf = self.mark_to_remove(Array_coord, inx,
+                                #                                                          nsegm=
+                                #                                                          self.pattern['num_segments'][
+                                #                                                              i])
+                                #     sublist_idx_csf.append(i_neuron_csf)
+                                # else:
+                                inx += 1
 
                     Array_coord = Array_coord[~np.all(Array_coord == -100000000.0,
                                                       axis=1)]  # deletes all marked (in self.mark_to_remove with -100000000.0) enteries
@@ -880,7 +881,7 @@ class Neuron_array(object):
             # show_connections(list_of_connections)
 
             logging.critical("Number of placed neuron models per population: {}".format(N_models))
-            del Array_coord_total, voxel_array_CSF_shifted
+            del Array_coord_total#, voxel_array_CSF_shifted
 
         if self.Type == 'Imported':
             del List_of_arrays
@@ -891,3 +892,4 @@ class Neuron_array(object):
         logging.critical("----- Adjustment of the neuron models took {} min {} sec -----\n".format(minutes, secnds))
 
         self.N_models = N_models
+

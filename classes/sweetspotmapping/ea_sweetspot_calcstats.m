@@ -7,6 +7,13 @@ else % used in permutation based statistics - in this case the real improvement 
 end
 
 val = obj.results.efield;
+%obj.efieldthreshold = 50;
+
+% for side = 1:size(val,1)
+%     tmp = ea_SigmoidFromEfield(val{side}(:,:)');
+%     val{side}(:,:) = tmp';
+% end
+% obj.efieldthreshold = 0.0;
 
 % quickly recalc stats:
 if ~exist('patsel','var') % patsel can be supplied directly (in this case, obj.patientselection is ignored), e.g. for cross-validations.
@@ -83,9 +90,9 @@ for group=groups
                     end
                 end
 
-                if obj.mirrorsides
-                    amps = [amps;amps];
-                end
+                %if obj.mirrorsides
+                %    amps = [amps;amps];
+                %end
 
                 %get VTA Size
                 VTAsize(:,side) = sum(gval{side},2);
@@ -149,6 +156,7 @@ for group=groups
                         else
                             tmpind = 1:length(gpatsel);
                         end
+                        tmpind = 1:length(gpatsel);
                         Nmap=ea_nansum(double(gval{side}(gpatsel(tmpind),:)));
                         vals{group,side} = Nmap';
                         vals{group,side}(vals{group,side} < round(numel(tmpind)*(obj.statNthreshold/100))) = NaN;
@@ -287,10 +295,16 @@ for group=groups
                     case 'Correlations'
 
                         thisvals=gval{side}(gpatsel,:);
-                        Nmap=ea_nansum(~isnan(thisvals));
+                        %Nmap=ea_nansum(~isnan(thisvals));
+
+                        %nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
+                        thatvals = nan(size(thisvals));
+                        thatvals(thisvals>=340.0) = thisvals(thisvals>=340.0);
+                        Nmap=ea_nansum(~isnan(thatvals));
 
                         nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
                         thisvals=thisvals(:,~nanidx);
+
                         if obj.showsignificantonly
                             [R,p]=ea_corr(thisvals,I(gpatsel,side),obj.corrtype);
                             R=ea_corrsignan(R,p,obj);

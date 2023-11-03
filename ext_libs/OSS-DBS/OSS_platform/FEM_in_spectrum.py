@@ -193,7 +193,7 @@ def get_scaled_cond_tensor(mesh,subdomains,sine_freq,signal_freq,unscaled_tensor
     c12 = df.MeshFunction("double", mesh, 3, 0.0)
     c22 = df.MeshFunction("double", mesh, 3, 1.0)
 
-    if int(sine_freq)==int(signal_freq):  # will be used for visualization
+    if int(sine_freq)==int(5000):  # will be used for visualization
         c_unscaled00 = unscaled_tensor[0]
         c_unscaled01 = unscaled_tensor[1]
         c_unscaled02 = unscaled_tensor[2]
@@ -236,7 +236,7 @@ def get_scaled_cond_tensor(mesh,subdomains,sine_freq,signal_freq,unscaled_tensor
            c00=c00, c01=c01, c02=c02, c11=c11, c12=c12, c22=c22, degree=0)
     C_tensor = df.as_matrix(((c[0], c[1], c[2]), (c[1], c[3], c[4]),(c[2],c[4],c[5])))
 
-    if int(sine_freq)==int(signal_freq):
+    if int(sine_freq)==int(5000):
         c_unscaled = df.CompiledExpression(df.compile_cpp_code(conductivity_code).Conductivity(),
                        c00=c_unscaled00, c01=c_unscaled01, c02=c_unscaled02, c11=c_unscaled11, c12=c_unscaled12, c22=c_unscaled22, degree=0)
         tensor= df.as_tensor([[c_unscaled[0], c_unscaled[1], c_unscaled[2]], [c_unscaled[1], c_unscaled[3], c_unscaled[4]],[c_unscaled[2],c_unscaled[4],c_unscaled[5]]])

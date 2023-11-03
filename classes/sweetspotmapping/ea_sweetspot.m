@@ -135,7 +135,25 @@ classdef ea_sweetspot < handle
             end
 
             if isfield(obj.M,'pseudoM')
-                vatlist = obj.M.ROI.list;
+                %vatlist = obj.M.ROI.list;
+
+                numPatient = length(obj.allpatients);
+                vatlist = cell(numPatient*2,2);
+                 for i = 1:numPatient
+                     vatlist{i,1} = obj.M.ROI.list{i,1};
+                     vatlist{i,2} = obj.M.ROI.list{i,2};
+                 end
+                 %for i = numPatient+1 : numPatient*2
+                 %    vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:53),'fl_efield_left_',num2str(i-numPatient),'.nii'];
+                 %    vatlist{i,2} = [obj.M.ROI.list{i-numPatient,2}(1:53),'fl_efield_right_',num2str(i-numPatient),'.nii'];
+                 %end
+                 for i = numPatient+1 : numPatient*2
+                     vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_left.nii'];
+                     vatlist{i,2} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_right.nii'];
+                 end
+
+
+
             else
                 vatlist = ea_sweetspot_getvats(obj);
             end
@@ -327,21 +345,32 @@ classdef ea_sweetspot < handle
                                         Ihat(test,side) = ea_discfibers_getpeak(vals{1,side}.*efield, obj.posvisible, obj.negvisible, 'peak5');
                                 end
                             case 'E-Fields'
+
+
+                                %tmp = ea_SigmoidFromEfield(obj.results.efield{side}(:,:)');
+                                %sigmoid_field = tmp';
+     
+                                %sigmoid_field(sigmoid_field <= 0.1) = 0.015; 
+                                %sigmoid_field(sigmoid_field <= 0.25) = 0.0;
+
+                                sigmoid_field = obj.results.efield{side}(:,:);
+                                %sigmoid_field(sigmoid_field <= 100) = 0.0;
+
                                 switch lower(obj.basepredictionon)
                                     case 'profile of scores: spearman'
-                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},obj.results.efield{side}(patientsel(test),:)','spearman'));
+                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},sigmoid_field(patientsel(test),:)','spearman'));
                                     case 'profile of scores: pearson'
-                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},obj.results.efield{side}(patientsel(test),:)','pearson'));
+                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},sigmoid_field(patientsel(test),:)','pearson'));
                                    case 'profile of scores: bend'
-                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},obj.results.efield{side}(patientsel(test),:)','bend'));
+                                        Ihat(test,side) = atanh(ea_corr(vals{1,side},sigmoid_field(patientsel(test),:)','bend'));
                                     case 'mean of scores'
-                                        Ihat(test,side) = ea_nanmean(vals{1,side}.*obj.results.efield{side}(patientsel(test),:)',1);
+                                        Ihat(test,side) = ea_nanmean(vals{1,side}.*sigmoid_field(patientsel(test),:)',1);
                                     case 'sum of scores'
-                                        Ihat(test,side) = ea_nansum(vals{1,side}.*obj.results.efield{side}(patientsel(test),:)',1);
+                                        Ihat(test,side) = ea_nansum(vals{1,side}.*sigmoid_field(patientsel(test),:)',1);
                                     case 'peak of scores'
-                                        Ihat(test,side) = ea_discfibers_getpeak(vals{1,side}.*obj.results.efield{side}(patientsel(test),:)', obj.posvisible, obj.negvisible, 'peak');
+                                        Ihat(test,side) = ea_discfibers_getpeak(vals{1,side}.*sigmoid_field(patientsel(test),:)', obj.posvisible, obj.negvisible, 'peak');
                                     case 'peak 5% of scores'
-                                        Ihat(test,side) = ea_discfibers_getpeak(vals{1,side}.*obj.results.efield{side}(patientsel(test),:)', obj.posvisible, obj.negvisible, 'peak5');
+                                        Ihat(test,side) = ea_discfibers_getpeak(vals{1,side}.*sigmoid_field(patientsel(test),:)', obj.posvisible, obj.negvisible, 'peak5');
                                 end
                         end
                     end

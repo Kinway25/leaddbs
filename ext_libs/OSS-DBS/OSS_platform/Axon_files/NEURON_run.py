@@ -263,6 +263,7 @@ def run_simulation_with_NEURON(d, Neuron_models, shift_to_MRI_space, population_
     # note: these should have been lists before
     if not isinstance(Neuron_models.pattern['num_Ranvier'], list) and not isinstance(Neuron_models.pattern['num_Ranvier'], (np.ndarray, np.generic)): # in this case -1 will refer to the only entry in the lists
         Neuron_models.pattern['num_Ranvier'] = [Neuron_models.pattern['num_Ranvier']]
+        Neuron_models.pattern['fiber_diameter'] = [Neuron_models.pattern['fiber_diameter']]
 
     if not isinstance(Neuron_models.N_models, list) and not isinstance(Neuron_models.N_models, (np.ndarray, np.generic)):               # in this case -1 will refer to the only entry in the lists
         Neuron_models.N_models = [Neuron_models.N_models]
@@ -273,6 +274,9 @@ def run_simulation_with_NEURON(d, Neuron_models, shift_to_MRI_space, population_
     else:
         stim_folder = 'Results_lh/'
 
+
+
+    population_index = int(population_index)
     #  load compartments of the relevant neuron models (for multiple protocols, might make sense to cache it)
     if population_index == -1:            # only one population is simulated
         population_name = ''
@@ -471,8 +475,12 @@ def run_simulation_with_NEURON(d, Neuron_models, shift_to_MRI_space, population_
 #        hf = h5py.File('Field_solutions/Activation/Activation_in_'+d["Name_prepared_neuron_array"][:-3]+'.h5', 'a')
 #        hf.create_dataset(str(lst[population_index])+'_'+str(Activated_models), data=Nodes_status_MRI_space_only_activated)
 #        hf.close()
+    if d['Name_prepared_neuron_array'] != 0:
+        mdic = {"fibers": Axon_Lead_DBS, "ea_fibformat": "1.0", "connectome_name": d["Name_prepared_neuron_array"][:-3]}  # For Lead-DBS .mat files
+    else:
+        mdic = {"fibers": Axon_Lead_DBS, "ea_fibformat": "1.0",
+                "connectome_name": 'RealVTA'}  # For Lead-DBS .mat files
 
-    mdic = {"fibers": Axon_Lead_DBS, "ea_fibformat": "1.0", "connectome_name": d["Name_prepared_neuron_array"][:-3]}  # For Lead-DBS .mat files
     if population_index == -1:
         logging.critical("{}% activation (including damaged neurons)\n".format(np.round(Activated_models/float(number_neurons_initially)*100,2)))
 
@@ -481,6 +489,12 @@ def run_simulation_with_NEURON(d, Neuron_models, shift_to_MRI_space, population_
             np.save(os.environ['PATIENTDIR']+'/'+stim_folder+'Connection_status_MRI', connection_status_MRI)
             savemat(os.environ['PATIENTDIR'] + "/" + stim_folder + "Axon_state.mat", mdic)
             np.savetxt(os.environ['PATIENTDIR']+'/'+stim_folder+'Neurons_status.csv', Vert_full_status, delimiter=" ")  #Ningfei prefers .csv
+
+            Axon_Lead_DBS_PO = Axon_Lead_DBS
+            Axon_Lead_DBS_PO[:,0:3] = Axon_Lead_DBS[:,0:3] + shift_to_MRI_space
+            np.savetxt(os.environ['PATIENTDIR'] + '/' + stim_folder + 'Axon_Activation.csv', Axon_Lead_DBS_PO,
+                       delimiter=" ")  # Ningfei prefers .csv
+
             np.savetxt(os.environ['PATIENTDIR'] + '/' + stim_folder + 'Summary_status.csv', Summary_status, delimiter=" ")
             #np.savetxt(os.environ['PATIENTDIR']+'/'+stim_folder+'Activation_Neuron_Array_'+str(Activated_models)+'_MRI.csv', Nodes_status_MRI_space_only_activated, delimiter=" ")
         else:

@@ -5,7 +5,8 @@ disp('Load Connectome...');
 load(cfile, 'fibers', 'idx');
 
 
-numPatient = length(obj.allpatients);  % no mirroring
+%numPatient = length(obj.allpatients);  % no mirroring
+numPatient = size(pamlist,1);
 numSide = 2; % hardcoded for now (as in ...getvats.m)
 
 fibsvalBin = cell(1, numSide);
@@ -29,17 +30,109 @@ for side = 1:numSide
     disp(['Calculate for side ', num2str(side), ':']);
     for pt = 1:numPatient
  
+        disp(pt)
+
         if obj.multi_pathways == 1 % fiberActivation_side.mat already contains all fibers (incl. filtered out by Kuncel-VTA)
             fib_state_raw = load(char(pamlist(pt,side)));
             total_fibers = length(fib_state_raw.idx);
             fib_state = zeros(total_fibers,1);
             last_loc_i = 1;  
             
-            for fib_i = 1:total_fibers
-                fib_state(fib_i) = fib_state_raw.fibers(last_loc_i,5);
-                last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
+            % non-mirrored
+            if pt <= length(obj.allpatients)
+                for fib_i = 1:total_fibers
+                    fib_state(fib_i) = fib_state_raw.fibers(last_loc_i,5);
+                    last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
+                end
+            else
+                %disp("OUPS, not supposed to be here!")
+                % excessive step, but simplifies logic
+                fib_state_non_mirror = zeros(total_fibers,1);
+                for fib_i = 1:total_fibers
+                     fib_state_non_mirror(fib_i) = fib_state_raw.fibers(last_loc_i,5);
+                    last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
+                end
+
+                % for mirrored we load blocks of pathway counterparts as defined in
+                % obj.map_list (order is path1_rh,path1_lh,path2_rh...)
+                for pathway_i = 1:length(obj.map_list)
+                    path_start = obj.map_list(pathway_i);
+
+                    if pathway_i ~= length(obj.map_list)
+                        path_end = obj.map_list(pathway_i+1) - 1;
+                    end
+
+                    if pathway_i == 15
+                        disp("there")
+                    end
+
+                    % odd numbers are rh, even lh
+                    if rem(pathway_i,2)
+                        path_start_counter = obj.map_list(pathway_i+1);
+                        if pathway_i == length(obj.map_list)-1
+                            disp("prelast pathway")
+                        else
+                            path_end_counter = obj.map_list(pathway_i+2) - 1;
+                        end
+                    else
+                        path_start_counter = obj.map_list(pathway_i-1);
+                        path_end_counter = obj.map_list(pathway_i) - 1;                        
+                    end
+
+                    % fiber statuses are stored in fibers, so we have check
+                    % first points on the fiber
+                    if pathway_i == length(obj.map_list)-1
+
+                        fib_state(path_start:path_end) = fib_state_non_mirror(path_start_counter:end);
+                    elseif pathway_i == length(obj.map_list)
+                        fib_state(path_start:end) = fib_state_non_mirror(path_start_counter:path_end_counter);
+                    else
+                        fib_state(path_start:path_end) = fib_state_non_mirror(path_start_counter:path_end_counter);
+                    end
+
+                    % also check if the "correct" side has only zeros
+                    if (side == 1 && rem(pathway_i,2)) || (side == 2 && rem(pathway_i,2)==0)
+                        if pathway_i == length(obj.map_list)
+                            if any(fib_state_non_mirror(path_start:end) == 1)
+                                disp("WRONG!")
+                            end
+                        else
+                            if any(fib_state_non_mirror(path_start:path_end) == 1)
+                                disp("WRONG!")
+                            end
+                        end
+                    end
+
+
+
+                    %last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
+                end
+
+
+                % check if any values were wrongly assigned to the counter
+                % side
+
+%                 for pathway_idx = 1:length(obj.pathway_list)/2
+% %                     if side == 1
+% %                         path_start = obj.map_list(pathway_idx*2);
+% %                         path_end = obj.map_list(pathway_idx*2+1)-1;
+%                     if side == 2
+%                         path_start = obj.map_list(pathway_idx*2-1);
+%                         path_end = obj.map_list(pathway_idx*2)-1;
+% 
+%                         if any(fib_state(path_start:path_end))
+%                             disp("WRONG!")
+%                         end
+%                     end
+%                 
+%                 end
+
             end
             
+        
+            % remove comb just for vis
+            fib_state(obj.map_list(69):obj.map_list(73)-1) = 0;
+
         else
 
             load(cfile, 'fibers', 'idx');
@@ -86,8 +179,8 @@ for side = 1:numSide
         end
        
         % alternatively, you could also add fib_state == -1
-        activated = find(fib_state == 1);
-        %activated = find(fib_state == 1  | fib_state == -1);
+        %activated = find(fib_state == 1);
+        activated = find(fib_state == 1  | fib_state == -1);
 
         % needed
         % Generate binary fibsval for the T-test method

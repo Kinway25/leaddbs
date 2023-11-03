@@ -42,9 +42,10 @@ end
 % create final space:
 for side=1:size(vatlist,2)
     nii=ea_load_nii([outdir,'efield_bb',sidesuffices{side},'.nii']);
-    if ~isfield(obj.M,'pseudoM')
-        nii.img(nii.img<150)=nan;
-    end
+    %if ~isfield(obj.M,'pseudoM')
+    %    nii.img(nii.img<150)=nan;
+    %end
+    nii.img(nii.img<150)=nan;
     ea_write_nii(nii);
     ea_crop_nii(nii.fname);
     nii=ea_load_nii(nii.fname); % reload for space function.
@@ -54,6 +55,7 @@ end
 % now conform each VTA to space
 AllX=cell(size(vatlist,2),1);
 for vat=1:size(vatlist,1)
+    disp(vat)
     for side=1:size(vatlist,2)
         copyfile(vatlist{vat,side},[outdir,'tmp_efield.nii']);
         ea_conformspaceto([outdir,'efield_bb',sidesuffices{side},'.nii'],...

@@ -3,6 +3,8 @@ function varargout = ea_genvat_butenko(varargin)
 
 % set to 1 if you only want to prep files for cluster comp.
 prepFiles_cluster = 0; % for now hardcoded
+ossdbs_V = 2;
+
 
 if nargin==2
     S=varargin{1};
@@ -113,12 +115,17 @@ end
 settings.Patient_folder = options.subj.subjDir;
 
 %% Set native/MNI flag
-settings.Estimate_In_Template = options.prefs.machine.vatsettings.estimateInTemplate;
+settings.Estimate_In_Template = ~options.native;
 
 %% Set MRI path
 % Put the MRI file in stimulation folder
 copyfile(segMaskPath, [outputDir, filesep, segmaskName]);
-settings.MRI_data_name = segmaskName;
+
+if ossdbs_V == 2
+    settings.MRI_data_name = [outputDir, filesep, segmaskName];
+else
+    settings.MRI_data_name = segmaskName;
+end
 
 %% Check tensor data
 tensorName = options.prefs.machine.vatsettings.butenko_tensorFileName;
@@ -133,7 +140,12 @@ templateTensorScaled = [ea_space, scaledTensorName];
 tensorData = [outputDir, filesep, scaledTensorName]; % Final tensor data input for OSS-DBS
 
 % Set to empty by default
-settings.DTI_data_name = '';
+settings.calcAxonActivation = options.prefs.machine.vatsettings.butenko_calcAxonActivation;
+if ossdbs_V == 2
+    settings.DTI_data_name = 'no dti';
+else
+    settings.DTI_data_name = '';
+end
 
 time = datetime('now', 'TimeZone', 'local');
 timezone = time.TimeZone;
@@ -215,6 +227,10 @@ if ~isempty(settings.DTI_data_name)
     fprintf('Scaled tensor data added: %s\n\n', settings.DTI_data_name)
 end
 
+if ossdbs_V == 2 && ~strcmp(settings.DTI_data_name, 'no dti') 
+    settings.DTI_data_name = [outputDir, filesep, settings.DTI_data_name];
+end
+
 %% Index of the tissue in the segmented MRI data
 settings.GM_index = 1;
 settings.WM_index = 2;
@@ -292,6 +308,7 @@ settings.Case_grounding = zeros(eleNum, 1);
 
 % Get the stimulation parameters from S in case stimSetMode is 0, otherwise
 % they will be loaded directly from the Current_protocols_[0|1].csv files
+
 if ~settings.stimSetMode
     [settings.Phi_vector, settings.current_control, settings.Case_grounding] = ea_getStimVector(S, eleNum, conNum);
 end
@@ -307,7 +324,6 @@ else
 end
 
 % Axon activation setting
-settings.calcAxonActivation = options.prefs.machine.vatsettings.butenko_calcAxonActivation;
 if settings.calcAxonActivation
     settings.connectome = options.prefs.machine.vatsettings.butenko_connectome;
     settings.axonLength = options.prefs.machine.vatsettings.butenko_axonLength;
@@ -540,15 +556,33 @@ for side=0:1
                     '--volume ', ea_getearoot, 'ext_libs/OSS-DBS:/opt/OSS-DBS ', ...
                     '--volume ', outputDir, ':/opt/Patient ', ...
                     '--rm ', dockerImage, ' ', ...
-                    'python3 /opt/OSS-DBS/OSS_platform/Axon_allocation.py /opt/Patient ', num2str(side), ' McIntyre2002_ds']);
+                    'python3 /opt/OSS-DBS/OSS_platform/Axon_allocation.py /opt/Patient ', num2str(side), ' Reilly2016']);
         else % Singularity
             system(['python3 ', ea_getearoot, 'ext_libs/OSS-DBS/OSS_platform/Axon_allocation.py ', outputDir, ' ', num2str(side), ' McIntyre2002_ds']);
         end
-    end
 
-    % Call OSS-DBS GUI to start calculation
-    system(['python', ' ', ea_getearoot, 'ext_libs/OSS-DBS/OSS_platform/OSS-DBS_LeadDBS_integrator.py ', ...
+            % Call OSS-DBS GUI to start calculation
+        system(['python', ' ', ea_getearoot, 'ext_libs/OSS-DBS/OSS_platform/OSS-DBS_LeadDBS_integrator.py ', ...
             parameterFile, ' ', num2str(side)]);	% 0 is right side, 1 is the left side here
+
+
+    else
+        % use OSS-DBS v2 environment
+
+        pyenv('Version', ... 
+                   '/home/konstantin/ossdbs_virtenv/ossdbs_virtenv/bin/python', ... 
+                   'ExecutionMode','OutOfProcess') 
+
+        %setenv()
+
+        %parameterFile = '/home/konstantin/Documents/example_pt/SF1204BIDS/derivatives/leaddbs/sub-SanFrancisco1204/stimulations/native/20220815181629/oss-dbs_parameters.mat';
+
+        %system(['/home/konstantin/ossdbs_virtenv/bin/python /home/konstantin/OSS-DBSv2/ossdbs/leaddbs_interface/pipe_run.py ' parameterFile, ' ' ,char(string(side))])
+        system(['/home/konstantin/ossdbs_virtenv/ossdbs_virtenv/bin/leaddbs2ossdbs --hemi_side ', num2str(side), ' ', parameterFile, ...
+            ' --output_path ', outputDir])
+        parameterFile_json = [parameterFile(1:end-3), 'json'];
+        system(['/home/konstantin/ossdbs_virtenv/ossdbs_virtenv/bin/ossdbs ' , parameterFile_json])
+    end
 
     % Check if OSS-DBS calculation is finished
     while ~isfile([outputDir, filesep, 'success_', sideCode, '.txt']) ...
@@ -564,14 +598,19 @@ for side=0:1
     if isfile([outputDir, filesep, 'success_', sideCode, '.txt'])
         runStatus(side+1) = 1;
         fprintf('\nOSS-DBS calculation succeeded!\n\n')
+
+        if options.native && isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'E_field_MRI_space.csv']) % Transform to MNI space
+            ea_get_MNI_field_from_csv(options, [outputDir, filesep, 'Results_', sideCode, filesep,'E_field_MRI_space.csv'], settings.Activation_threshold_VTA, sideLabel, templateOutputBasePath)
+        end
+
         % Copy VAT files
         if isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'E_field_solution.nii'])
             % IMPORTANT: you can't use the transformation on the E_field_solution.nii computed in native
             copyfile([outputDir, filesep, 'Results_', sideCode, filesep, 'E_field_solution.nii'], ...
                      [outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii'])
 
-            if options.native % Transform to MNI space
-                ea_get_MNI_field_from_csv(options, [outputDir, filesep, 'Results_', sideCode, filesep,'E_field_MRI_space.csv'], settings.Activation_threshold_VTA, sideLabel, templateOutputBasePath)
+            %if options.native % Transform to MNI space
+            %    ea_get_MNI_field_from_csv(options, [outputDir, filesep, 'Results_', sideCode, filesep,'E_field_MRI_space.csv'], settings.Activation_threshold_VTA, sideLabel, templateOutputBasePath)
 %                 ea_apply_normalization_tofile(options,...
 %                     [outputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii'],... % from
 %                     [templateOutputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii'],... % to
@@ -579,13 +618,20 @@ for side=0:1
 %                     1, ... % linear interpolation
 %                     [ea_space, options.primarytemplate, '.nii']);
 %                 ea_autocrop([templateOutputBasePath, 'efield_model-ossdbs_hemi-', sideLabel, '.nii']);
-            end
+            %end
         end
 
-        if isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution.nii'])
+        if isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution.nii']) || isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution_WA.nii'])
             % IMPORTANT: you can't use the transformation on the VTA_solution.nii computed in native
-            copyfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution.nii'], ...
-                     [outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii'])
+
+            if isfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution.nii'])
+                copyfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution.nii'], ...
+                         [outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii'])
+            else
+                % but different space!
+                copyfile([outputDir, filesep, 'Results_', sideCode, filesep, 'VTA_solution_WA.nii'], ...
+                         [outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii'])
+            end
 
             vatToViz = [outputBasePath, 'binary_model-ossdbs_hemi-', sideLabel, '.nii'];
             if options.native % Transform to MNI space

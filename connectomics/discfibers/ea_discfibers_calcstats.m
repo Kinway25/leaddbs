@@ -14,17 +14,33 @@ if ~exist('patsel','var') % patsel can be supplied directly (in this case, obj.p
 end
 
 
+if strcmp(ea_method2methodid(obj), 'spearman_5peak')
+    scaling = 1.0;
+else
+    scaling = 1.0;
+end
+
 % fiber values can be sigmoid transform
 if obj.SigmoidTransform 
     fibsval_raw = obj.results.(ea_conn2connid(obj.connectome)).(ea_method2methodid(obj)).fibsval;
     fibsval = fibsval_raw;  % initialize
     for side = 1:size(fibsval_raw,2)
-        fibsval{1,side}(:,:) = ea_SigmoidFromEfield(fibsval_raw{1,side}(:,:));
+        fibsval{1,side}(:,:) = ea_SigmoidFromEfield(fibsval_raw{1,side}(:,:).*scaling);
     end
 else
     fibsval = cellfun(@full, obj.results.(ea_conn2connid(obj.connectome)).(ea_method2methodid(obj)).fibsval, 'Uni', 0);
+    for side = 1:size(fibsval,2)
+        fibsval{1,side}(:,:) = fibsval{1,side}(:,:).*scaling;
+    end
 end
 
+% for j = 1:size(fibsval_raw{1,1},1)
+%     if fibsval{1,1}(j,10) > 0.02 && fibsval{1,1}(j,10) < 0.242
+%         disp(fibsval{1,1}(j,10))
+%         disp(fibsval_raw{1,1}(j,10))
+%         disp("--------------")
+%     end
+% end
 
 if size(I,2)==1 % 1 entry per patient, not per electrode
     I=[I,I]; % both sides the same;
@@ -165,6 +181,239 @@ for group=groups
         end
     end
 
+% 
+%     % fit amplitude model
+%     side = 1;
+% 
+%     amp = zeros(length(gpatsel),1);
+%     %MDLTable = table('Size',[ntest*namps,3],'VariableTypes',{'logical','double','categorical'},'VariableNames',{'Capsule','EF','hemID'});
+% 
+%     % vals as contrast of two protocols
+%     for pt_i = 1:length(gpatsel)
+%         temp=strsplit(obj.M.patient.list{gpatsel(pt_i)},'_');
+%         %disp(temp{end}(1:3))
+%         if contains(obj.M.patient.list{gpatsel(pt_i)}, '_fl.')
+%             amp(pt_i) = str2num(temp{end-1}(1:3));
+%         else
+%             amp(pt_i) = str2num(temp{end}(1:3));
+%         end
+%         %trajDepth = temp{end}(4:end);
+%     end
+% 
+%     %TableSelection = table(I(gpatsel,side),amp,...
+%     %                            'VariableNames',{'response','amplitude'});
+%     %fm = 'response ~ amplitude';
+% 
+%     mdl = fitglm(amp,I(gpatsel,side),'Distribution','binomial','Link','logit'); 
+%     confusion_matrix(mdl,amp,I(gpatsel,side),0,0)
+
+
+%     % vals from contrasting
+%     side = 1;
+%     skip_list = zeros(length(gpatsel),1);
+% 
+%     % we need to check how many pairs we actually have
+%     % check sum(skip_list)
+%     val_stat_dif = zeros(length(gpatsel)/2, size(gfibsval{side},1));
+% 
+%     counter_pairs = 1;
+%     % vals as contrast of two protocols
+%     for pt_i = 1:length(gpatsel)
+% 
+%         % it is the effect VTA
+%         if skip_list(pt_i) == 1
+%             continue
+%         end
+%         %disp("----------------------------")
+%         %disp(pt_i)
+%         %disp(obj.M.patient.list{gpatsel(pt_i)})
+% 
+%         AmptTrajectDepth = strsplit(obj.M.patient.list{gpatsel(pt_i),side},'_');
+%         if contains(obj.M.patient.list{gpatsel(pt_i),side}, '_left_')
+%             pt_label_side = [AmptTrajectDepth{2},'_', AmptTrajectDepth{3}];
+%             AmptTrajectDepth = AmptTrajectDepth{end-1};
+%              
+%         else
+%             pt_label_side = [AmptTrajectDepth{2},'_', AmptTrajectDepth{3}];
+%             AmptTrajectDepth = AmptTrajectDepth{end};
+%             AmptTrajectDepth = AmptTrajectDepth(1:end-4);
+%         end
+%         ampl = str2double(AmptTrajectDepth(1:3));
+%         target_label_depth = AmptTrajectDepth(4:end);  
+% 
+%         % inner loop (always larger idx)
+%         for pt_j = pt_i+1:length(gpatsel)
+%             % check if the same patient and side
+%             if contains(obj.M.patient.list{gpatsel(pt_j)},pt_label_side)
+% 
+%                 disp("here")
+% 
+%                 % check if depth and trajectory is the same
+%                 AmptTrajectDepth2 = strsplit(obj.M.patient.list{gpatsel(pt_j),side},'_');
+%                 if contains(obj.M.patient.list{gpatsel(pt_j),side}, '_left_')
+%                     pt_label_side2 = [AmptTrajectDepth2{2},'_', AmptTrajectDepth2{3}];
+%                     AmptTrajectDepth2 = AmptTrajectDepth2{end-1};
+%                      
+%                 else
+%                     pt_label_side2 = [AmptTrajectDepth2{2},'_', AmptTrajectDepth2{3}];
+%                     AmptTrajectDepth2 = AmptTrajectDepth2{end};
+%                     AmptTrajectDepth2 = AmptTrajectDepth2(1:end-4);
+%                 end
+%                 ampl2 = str2double(AmptTrajectDepth2(1:3));
+%                 target_label_depth2 = AmptTrajectDepth2(4:end);  
+%                 
+%                 if strcmp(target_label_depth2, target_label_depth)
+%                     disp(obj.M.patient.list{gpatsel(pt_j)})
+%                     % check if amp is 0.5 mA different
+%                     if ampl2 - ampl ~= 1.0
+%                         disp("Amplitude mismatch, CHECK!!!")
+%                     end
+% 
+%                     % mark to skip later
+%                     skip_list(pt_j) = 1; 
+% 
+%                     % check difference in activation profiles
+%                     val_stat_dif(counter_pairs,:) = gfibsval{side}(:,gpatsel(pt_j)) - gfibsval{side}(:,gpatsel(pt_i));
+%                     % check if there are any negative values
+%                     if any(val_stat_dif(counter_pairs,:) < 0)
+%                         disp("De-activation, check!")
+%                     end
+% 
+%                     counter_pairs = counter_pairs + 1;
+% 
+%                 end
+%             end
+%         end
+%     end
+% 
+%     vals{group,side} = sum(val_stat_dif,1)';
+%     continue
+
+
+% % 
+% % 
+%     % vals from protocol contrasting
+%     % StimFit FF Order: RH_StimFit, RH_SoC, LH_StimFit, LH_SoC
+%     side = 1;
+%     %N_one_prot_one_side = [33,30];  % Brady
+%     %N_one_prot_one_side = [21,19];  % Rigidity
+%     N_one_prot_one_side = [20,15];  % Tremor
+% 
+% 
+%     % if only one side is checked at a time
+%     %N_one_prot_one_side = [17,16];  % Brady
+%     %N_one_prot_one_side = [15,15];  % Brady
+% 
+%     %N_one_prot_one_side = [11,10];  % Rigidity
+%     %N_one_prot_one_side = [10,9];  % Rigidity
+% 
+%     %N_one_prot_one_side = [10,10];  % Tremor
+%     %N_one_prot_one_side = [8,7];  % Tremor
+% 
+%     % Fols needs to be manualy handpicked, see K-fold for JR
+% 
+%     gfibsval_contrast = zeros(length(gpatsel)/2, size(gfibsval{side},1))';
+% 
+%     % % fibers connected to too few or too many are nulified
+%     %sumgfibsval=sum(gfibsval{side}(:,gpatsel),2);
+%     %gfibsval{side}(sumgfibsval<((obj.connthreshold/100)*length(gpatsel)),gpatsel)=0;
+%     %gfibsval{side}(sumgfibsval>((1-(obj.connthreshold/100))*length(gpatsel)),gpatsel)=0;
+% 
+%     % vals as contrast of two protocols
+%     % rh StimFit - SOC difference
+%     gfibsval_contrast(:,1:N_one_prot_one_side(1)) = gfibsval{side}(:,gpatsel(1:N_one_prot_one_side(1))) - gfibsval{side}(:,gpatsel(N_one_prot_one_side(1)+1:N_one_prot_one_side(1)*2));
+%     % lh StimFit - SOC difference
+%     gfibsval_contrast(:,N_one_prot_one_side(1)+1:sum(N_one_prot_one_side)) = gfibsval{side}(:,gpatsel(2*N_one_prot_one_side(1)+1:2*N_one_prot_one_side(1)+N_one_prot_one_side(2))) - gfibsval{side}(:,gpatsel(2*N_one_prot_one_side(1)+N_one_prot_one_side(2)+1:2*sum(N_one_prot_one_side)));
+% 
+%     Impr_dif = zeros(length(gpatsel)/2,1);
+%     Impr_dif(1:N_one_prot_one_side(1)) = I(gpatsel(1:N_one_prot_one_side(1)),side) - I(gpatsel(N_one_prot_one_side(1)+1:N_one_prot_one_side(1)*2),side);
+%     Impr_dif(N_one_prot_one_side(1)+1:sum(N_one_prot_one_side)) = I(gpatsel(2*N_one_prot_one_side(1)+1:2*N_one_prot_one_side(1)+N_one_prot_one_side(2)),side) - I(gpatsel(2*N_one_prot_one_side(1)+N_one_prot_one_side(2)+1:2*sum(N_one_prot_one_side)),side);
+%     allvals=repmat(Impr_dif',size(gfibsval_contrast,1),1);
+% 
+%     % filter out fibers where there are too few patients for contrasting
+%     N_contrast = 8;
+%     sumgfibsval = zeros(size(gfibsval_contrast,1),1);
+%     sumgfibsval_Act = zeros(size(gfibsval_contrast,1),1);
+%     sumgfibsval_DeAct = zeros(size(gfibsval_contrast,1),1);
+%     for fib_i = 1:size(sumgfibsval,1)
+% 
+%         % check how many nonzero entries
+%         sumgfibsval(fib_i) = nnz(gfibsval_contrast(fib_i,:));
+% 
+%         sumgfibsval_Act(fib_i) = sum(gfibsval_contrast(fib_i,:) == 1);
+%         sumgfibsval_DeAct(fib_i) = sum(gfibsval_contrast(fib_i,:) == -1);
+% 
+%         % balance number of activated and deactivated by inverting some entries
+%         N_dif = sumgfibsval_Act(fib_i) - sumgfibsval_DeAct(fib_i);
+% 
+%         if N_dif > 1
+%             idx_dom_stat = find(gfibsval_contrast(fib_i,:) == 1);
+%         elseif N_dif < -1
+%             idx_dom_stat = find(gfibsval_contrast(fib_i,:) == -1);
+%         else
+%             continue
+%         end
+%         %disp("here")
+%         rand_balance_pick = randi([1 size(idx_dom_stat,2)],[abs(N_dif),1]);
+%         pts_to_flip = idx_dom_stat(rand_balance_pick);
+% 
+%         % flip Improvement for particular fibers
+%         allvals(fib_i,pts_to_flip) = -1*allvals(fib_i,pts_to_flip); 
+%         gfibsval_contrast(fib_i,pts_to_flip) = -1*gfibsval_contrast(fib_i,pts_to_flip);
+%         %Impr_dif(pts_to_flip) = -1*Impr_dif(pts_to_flip);
+%     end
+%     gfibsval_contrast(sumgfibsval<N_contrast,:)=0;
+% 
+% 
+% 
+%     %vals{group,side} = sum(val_stat_dif,1)';
+% 
+% 
+% %     allvals=repmat(I(gpatsel,side)',size(gfibsval{side}(:,gpatsel),1),1); % improvement values (taken from Lead group file or specified in line 12).
+% %     fibsimpval=allvals; % Make a copy to denote improvements of connected fibers
+% %     fibsimpval=double(fibsimpval); % in case entered logical
+% %     fibsimpval(~logical(gfibsval{side}(:,gpatsel)))=nan; % Delete all unconnected values
+% %     nfibsimpval=allvals; % Make a copy to denote improvements of unconnected fibers
+% %     nfibsimpval(logical(gfibsval{side}(:,gpatsel)))=nan; % Delete all connected values
+% 
+%     Activ_impr = allvals;
+%     Activ_impr(gfibsval_contrast == -1) = nan;
+%     Activ_impr(gfibsval_contrast == 0) = nan;   % excluding for now all that did not change the status
+%     DeActiv_impr = allvals;
+%     DeActiv_impr(gfibsval_contrast == 1) = nan;
+%     DeActiv_impr(gfibsval_contrast == 0) = nan;   % excluding for now all that did not change the status
+% 
+%     [~,ps,~,stats]=ttest2(Activ_impr',DeActiv_impr'); % Run two-sample t-test across connected / unconnected values
+%     vals{group,side}=stats.tstat';
+%     
+% 
+%     for i = 1:size(vals{group,side},1)
+%         if isinf(vals{group,side}(i))
+%             disp(i)
+%         end
+%     end
+% 
+% %                         % Comment this if you don't want the graphs
+% %                         % if you need negative fibers just use min here 
+% %                         [~, maxidx] = max(vals{group,side}); 
+% %                         imp_conn = fibsimpval(maxidx, :); 
+% %                         imp_nonconn = nfibsimpval(maxidx, :); 
+% %                         % [~,ps,~,stats]=ttest2(imp_conn', imp_nonconn'); 
+% %                         figure
+% %                         %swarmchart([ones(size(imp_conn)); ones(size(imp_conn))*2]',[imp_conn; imp_nonconn]'); 
+% %                         boxplot([imp_conn; imp_nonconn]');
+% %                         xticks(1:2)
+% %                         xticklabels({'Connected VTAs', 'Non-connected VTAs'}); 
+% %                         ylabel('Improvement')                        
+%     
+% 
+%     if obj.showsignificantonly
+%         pvals{group,side}=ps';
+%     end
+% 
+%     continue
+
+
     for side=1:numel(gfibsval)
         % check connthreshold
         if obj.runwhite || strcmp(obj.statmetric,'Plain Connections')
@@ -175,7 +424,7 @@ for group=groups
                     sumgfibsval=sum(gfibsval{side}(:,gpatsel),2);
                 case {'Correlations / E-fields (Irmen 2020)','Reverse T-Tests / E-Fields (binary vars)','Odds Ratios / EF-Sigmoid (Jergas 2023)','Weighted Linear Regression / EF-Sigmoid (Dembek 2023)'}
                     if obj.SigmoidTransform == 1 && (strcmp(ea_method2methodid(obj), 'spearman_5peak') || strcmp(ea_method2methodid(obj), 'spearman_peak'))
-                        % 0.5 V / mm -> 0.5 probability 
+                        % 0.5 V/mm -> 0.5 probability 
                         sumgfibsval=sum((gfibsval{side}(:,gpatsel)>obj.efieldthreshold/1000.0),2);
                     else
                         sumgfibsval=sum((gfibsval{side}(:,gpatsel)>obj.efieldthreshold),2);
@@ -259,18 +508,18 @@ for group=groups
                         [~,ps,~,stats]=ttest2(fibsimpval',nfibsimpval'); % Run two-sample t-test across connected / unconnected values
                         vals{group,side}=stats.tstat';
                         
-                        % Comment this if you don't want the graphs
-                        % if you need negative fibers just use min here 
-                        [~, maxidx] = max(vals{group,side}); 
-                        imp_conn = fibsimpval(maxidx, :); 
-                        imp_nonconn = nfibsimpval(maxidx, :); 
-                        % [~,ps,~,stats]=ttest2(imp_conn', imp_nonconn'); 
-                        figure
-                        %swarmchart([ones(size(imp_conn)); ones(size(imp_conn))*2]',[imp_conn; imp_nonconn]'); 
-                        boxplot([imp_conn; imp_nonconn]');
-                        xticks(1:2)
-                        xticklabels({'Connected VTAs', 'Non-connected VTAs'}); 
-                        ylabel('Improvement')                        
+%                         % Comment this if you don't want the graphs
+%                         % if you need negative fibers just use min here 
+%                         [~, maxidx] = max(vals{group,side}); 
+%                         imp_conn = fibsimpval(maxidx, :); 
+%                         imp_nonconn = nfibsimpval(maxidx, :); 
+%                         % [~,ps,~,stats]=ttest2(imp_conn', imp_nonconn'); 
+%                         figure
+%                         %swarmchart([ones(size(imp_conn)); ones(size(imp_conn))*2]',[imp_conn; imp_nonconn]'); 
+%                         boxplot([imp_conn; imp_nonconn]');
+%                         xticks(1:2)
+%                         xticklabels({'Connected VTAs', 'Non-connected VTAs'}); 
+%                         ylabel('Improvement')                        
                         
                         if obj.showsignificantonly
                             pvals{group,side}=ps';
@@ -312,8 +561,13 @@ for group=groups
                         conventionalcorr=0;
                     end
 
-                    nonempty=sum(gfibsval{side}(:,gpatsel),2)>0;
+                    nonempty=sum(gfibsval{side}(:,gpatsel),2)>0.0;
                     invals=gfibsval{side}(nonempty,gpatsel)';
+
+                     %figure
+                     %histogram(gfibsval{side}(:,15), 33)
+
+
                     if ~isempty(invals)
                         if exist('covars', 'var') && conventionalcorr % partial corrs only implemented for Pearson & Spearman
                             usecovars=[];

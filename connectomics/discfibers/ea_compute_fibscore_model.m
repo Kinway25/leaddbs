@@ -42,6 +42,69 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
         end
     end
 
+
+    %obj.responsevar(isnan(obj.responsevar)) = 0.0;
+
+
+
+    % fiber values can be sigmoid transform
+    if obj.SigmoidTransform 
+        fibsval_raw = fibsval;
+        for side = 1:size(fibsval_raw,2)
+            fibsval{1,side}(:,:) = ea_SigmoidFromEfield(fibsval_raw{1,side}(:,:));
+        end
+    end
+
+
+%     %fit amplitude model
+%     side = 1;
+% 
+%     amp_train = zeros(length(patientsel(training)),1);
+% 
+%     train_idx = patientsel(training);
+%     for pt_i = 1:length(patientsel(training))
+% 
+%         temp=strsplit(obj.M.patient.list{train_idx(pt_i)},'_');
+%         if contains(obj.M.patient.list{train_idx(pt_i)}, '_fl.')
+%             amp_train(pt_i) = str2num(temp{end-1}(1:3));
+%         else
+%             amp_train(pt_i) = str2num(temp{end}(1:3));
+%         end
+% 
+%     end
+% 
+%     amp_test = zeros(length(patientsel(test)),1);
+%     test_idx = patientsel(test);
+%     for pt_i = 1:length(patientsel(test))
+% 
+%         temp=strsplit(obj.M.patient.list{test_idx(pt_i)},'_');
+% 
+%         if contains(obj.M.patient.list{test_idx(pt_i)}, '_fl.')
+%             amp_test(pt_i) = str2num(temp{end-1}(1:3));
+%         else
+%             amp_test(pt_i) = str2num(temp{end}(1:3));
+%         end
+%     end
+% 
+%     fm = 'response ~ amplitude';
+% 
+%     mdl = fitglm(amp_train,obj.responsevar(train_idx),'Distribution','binomial','Link','logit'); 
+%     confusion_matrix(mdl,amp_train,obj.responsevar(train_idx),amp_test,obj.responsevar(test_idx))
+% 
+%     % second, we run ROC curve analysis
+%     scores = mdl.Fitted.Probability;
+%     [X,Y,T,AUC,OPTROCPT] = perfcurve(obj.responsevar(train_idx),scores,1);
+% 
+%     % optimal threshold on the classifier
+%     scores_thresh = T((X==OPTROCPT(1))&(Y==OPTROCPT(2)));
+% 
+%     % prediction for test based on the logit model
+%     scores_test = predict(mdl,amp_test);
+%     Ihat_prediction = scores_test > scores_thresh;
+%     I_test = obj.responsevar(test_idx);
+% 
+%     ea_get_binary_prediction_plots(obj, 39, patientsel(test), Ihat_prediction, I_test)
+
     if ~exist('Iperm', 'var') || isempty(Iperm)
         if obj.cvlivevisualize
             if obj.useExternalModel == true
