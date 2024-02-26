@@ -22,7 +22,7 @@ fixed dt      2.7 ms          6.05 ms   3.35 ms   17960 um/ms = 17.96 mm/ms = 17
 adaptive      2.315 ms        4.967 ms  2.652 ms  22680 um/ms = 22.67 mm/ms = 22.67 m/s
 */
 
-NNODES = 25
+NNODES = 23
 // NNODES = 5 // # nodes of Ranvier for debugging
 GAP = 2.5e-4 // width of node of Ranvier in cm
 // DIAM = 10 // fiber diameter in um including myelin

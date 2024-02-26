@@ -25,7 +25,7 @@ class NeuronStimulation:
 
     """
 
-    def __init__(self, pathway_dict, signal_dict, folder_to_save, scaling_vector=None, scaling_index=None):
+    def __init__(self, pathway_dict, signal_dict, folder_to_save, scaling_vector=None, scaling_index=None, special_suffix=None):
 
         self.folder_to_save = folder_to_save
 
@@ -45,6 +45,8 @@ class NeuronStimulation:
         self.scaling_vector = scaling_vector   # superposition-based solution scaling (contact-wise vector!)
         self.scaling = signal_dict['scaling']  # float, simple scaling of the whole solution (not contact-wise!)
         self.scaling_index = scaling_index
+
+        self.special_suffix = special_suffix
 
         from axon_allocation import get_axon_morphology
 
@@ -180,10 +182,9 @@ class NeuronStimulation:
                 savemat(self.folder_to_save + "/Axon_state_" + self.pathway_name + ".mat", mdic)
         else:
             if self.pathway_name is None:
-                savemat(self.folder_to_save + "/Axon_state_" + str(self.scaling_index) + ".mat", mdic)
+                savemat(self.folder_to_save + "/Axon_state_" + self.special_suffix + ".mat", mdic)
             else:
-                savemat(self.folder_to_save  + "/Axon_state_" + self.pathway_name + "_" + str(
-                    self.scaling_index) + ".mat", mdic)
+                savemat(self.folder_to_save  + "/Axon_state_" + self.pathway_name + "_" + self.special_suffix + ".mat", mdic)
 
 
     def create_paraview_outputs(self, Axon_Lead_DBS):
@@ -241,11 +242,11 @@ class NeuronStimulation:
         else:
             summary_dict['scaling_index'] = str(self.scaling_index)
             if self.pathway_name is None:
-                with open(self.folder_to_save + '/Pathway_status_' + str(self.scaling_index) + '.json', 'w') as save_as_dict:
+                with open(self.folder_to_save + '/Pathway_status_'+ self.special_suffix + '.json', 'w') as save_as_dict:
                     json.dump(summary_dict, save_as_dict)
             else:
                 summary_dict['pathway_name'] = self.pathway_name
-                with open(self.folder_to_save + '/Pathway_status_' + self.pathway_name + "_" + str(self.scaling_index) + '.json', 'w') as save_as_dict:
+                with open(self.folder_to_save + '/Pathway_status_' + self.pathway_name + "_" + self.special_suffix + '.json', 'w') as save_as_dict:
                     json.dump(summary_dict, save_as_dict)
 
 
@@ -340,7 +341,7 @@ class NeuronStimulation:
                 continue
 
         self.create_leaddbs_outputs(Axon_Lead_DBS)
-        self.create_paraview_outputs(Axon_Lead_DBS)
+        #self.create_paraview_outputs(Axon_Lead_DBS)
 
         percent_activated = np.round(Activated_models/float(self.orig_N_neurouns)*100,2)
         percent_damaged = np.round(np.sum(np.isclose(pre_status,-1.0))/float(self.orig_N_neurouns)*100,2)

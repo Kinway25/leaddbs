@@ -23,7 +23,7 @@ class AxonModels:
 
     """
 
-    def __init__(self, stim_dir, hemis_idx, description_file):
+    def __init__(self, stim_dir, hemis_idx, description_file, custom_center_coords):
 
         """
 
@@ -62,6 +62,7 @@ class AxonModels:
         # Lead-DBS input
         if self.description_file[-22:] == 'oss-dbs_parameters.mat':
             self._import_leaddbs_neurons(int(hemis_idx))
+            self.centering_coordinates = custom_center_coords
         elif self.description_file[-4:] == 'json':
             self.projection_names = None
             self.connectome_name = 'MyTracts'
@@ -334,30 +335,26 @@ class AxonModels:
             print(projection_name, 'projection is empty, check settings for fib. diameter and axon length')
             return 0,0,0  # no nodes were seeded
         else:
-            
-            # flip check
-            if fiber_array.shape[1] == 4 and fiber_array.shape[0] != 4:
-                fiber_array = fiber_array.T
-                idx_shape_inx = 0
-            else:
-                idx_shape_inx = 1
-            
             if multiple_projections_per_file == False:
                 if 'origNum' in file:
                     orig_N_fibers = int(file['origNum'][0][0])
                 else:
-                    orig_N_fibers = int(file['idx'][:].shape[idx_shape_inx])
+                    orig_N_fibers = int(file['idx'][:].shape[1])
             else:
                 if 'origNum' in file[projection_name]:
                     orig_N_fibers = int(file[projection_name]['origNum'][0][0])
                 else:
-                    orig_N_fibers = int(file[projection_name]['idx'][:].shape[idx_shape_inx])
+                    orig_N_fibers = int(file[projection_name]['idx'][:].shape[1])
 
         # covert fiber table to nibabel streamlines
+        #print(fiber_array.shape)
         streamlines = convert_fibers_to_streamlines(fiber_array)
+        #print(len(streamlines))
+
 
         # resample streamlines to nodes of Ranvier
         streamlines_resampled, excluded_streamlines_idx = resample_fibers_to_Ranviers(streamlines, axon_morphology)
+        print(self.centering_coordinates)
 
         # truncate streamlines to match selected axon length
         # axons are seeded on the segment closest to active contacts or other ROI, see self.centering_coordinates
@@ -404,13 +401,13 @@ class AxonModels:
 
             glob_ind = glob_ind + axon_morphology['n_segments']
 
-        np.savetxt(self.output_directory + '/' + 'axon_array_2D_' + projection_name + '.csv', axon_array_2D,
-                   delimiter=" ")
+        #np.savetxt(self.output_directory + '/' + 'axon_array_2D_' + projection_name + '.csv', axon_array_2D,
+        #           delimiter=" ")
 
         hf.close()
 
-        mdic = {"fibers": axon_array_2D, "ea_fibformat": "1.0"}
-        savemat(self.combined_h5_file + '_' + projection_name + "_axons.mat", mdic)
+        #mdic = {"fibers": axon_array_2D, "ea_fibformat": "1.0"}
+        #savemat(self.combined_h5_file + '_' + projection_name + "_axons.mat", mdic)
 
         return axon_morphology['n_Ranviers'], len(streamlines_axons), orig_N_fibers
 
@@ -592,7 +589,7 @@ def place_axons_on_streamlines(streamlines_resampled, axon_morphology, centering
         index_list = []
         for j in range(len(centering_coordinates)):
             distance, index = spatial.KDTree(A).query(
-                centering_coordinates[j])  # distance is a local index of closest node of Ranvier on the axon
+                centering_coordinates)  # distance is a local index of closest node of Ranvier on the axon
             distance_list.append(distance)
             index_list.append(index)
 
@@ -760,7 +757,10 @@ if __name__ == '__main__':
 
     hemis_idx = sys.argv[1:][1]
     oss_dbs_parameters_path = sys.argv[1:][2]
+    center_coords_x = float(sys.argv[1:][3])
+    center_coords_y = float(sys.argv[1:][4])
+    center_coords_z = float(sys.argv[1:][5])
 
     # process Lead-DBS input
-    axons_for_PAM = AxonModels(stim_dir, hemis_idx, oss_dbs_parameters_path)
+    axons_for_PAM = AxonModels(stim_dir, hemis_idx, oss_dbs_parameters_path, np.array([center_coords_x,center_coords_y,center_coords_z]))
     axons_for_PAM.convert_fibers_to_axons()

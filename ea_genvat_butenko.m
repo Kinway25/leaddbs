@@ -45,13 +45,15 @@ settings.butenko_intersectStatus = options.prefs.machine.vatsettings.butenko_int
 settings.removeElectrode = options.prefs.machine.vatsettings.butenko_removeElectrode;
 settings.neuronModel = options.prefs.machine.vatsettings.butenko_axonModel;
 settings.signalType = options.prefs.machine.vatsettings.butenko_signalType;
-settings.pulseWidth = options.prefs.machine.vatsettings.butenko_pulseWidth;
+%settings.pulseWidth = options.prefs.machine.vatsettings.butenko_pulseWidth;
+settings.pulseWidth = [60.0;60.0];
 settings.biphasic = options.prefs.machine.vatsettings.butenko_biphasic;
 settings.butenko_tensorData = options.prefs.machine.vatsettings.butenko_tensorData;
 settings.AdaptiveRef = options.prefs.machine.vatsettings.butenko_AdaptiveRef;
 settings.encapsulationType = options.prefs.machine.vatsettings.butenko_encapsulation;
 settings.outOfCore = 0;
-
+prob_PAM = 0;
+ 
 % Set output path
 subDescPrefix = ['sub-', options.subj.subjId, '_desc-'];
 subSimPrefix = ['sub-', options.subj.subjId, '_sim-'];
@@ -457,6 +459,17 @@ if settings.calcAxonActivation
                 fiberFiltered = ea_filterfiber_stim(conn, coords_mm, stimProtocol, 'kuncel', 2, [ea_space, options.primarytemplate, '.nii']);
             end
 
+            % restore all tracts on this side, remove all on the other
+            if contains(tract, '_left.mat')
+                fiberFiltered{1,2}.fibers = conn.fibers;
+                fiberFiltered{1,2}.idx = conn.idx;
+                fiberFiltered{1,1} = {};
+            else
+                fiberFiltered{1,1}.fibers = conn.fibers;
+                fiberFiltered{1,1}.idx = conn.idx;
+                fiberFiltered{1,2} = {};
+            end
+
             % Filter fibers based on the minimal length
             fiberFiltered = ea_filterfiber_len(fiberFiltered, settings.axonLength(t));
 
@@ -566,29 +579,75 @@ for side=0:1
 
     fprintf('\nRunning OSS-DBS for %s side stimulation...\n\n', sideStr);
 
-    if settings.calcAxonActivation
-        system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/axon_allocation.py ', outputDir,' ', num2str(side), ' ', parameterFile]);
-        % call axon_allocation script
+    if prob_PAM 
+        for i =1:5  % run different fiber diameters
+            folder2save = [outputDir,filesep,'Results_', sideCode];
+            ea_delete([outputDir, filesep, 'Allocated_axons.h5'])
+            ea_delete([folder2save,filesep,'oss_time_result_PAM.h5'])
+            settings.fiberDiameter = options.prefs.machine.vatsettings.butenko_fiberDiameter;
+            settings.fiberDiameter(:) = settings.fiberDiameter(:) + (i-1)*0.5;
+            %settings.axonLength = options.prefs.machine.vatsettings.butenko_axonLength;
+            %settings.axonLength(:) = settings.axonLength(:) + 2*i;
+            save(parameterFile, 'settings', '-v7.3');
+            if settings.calcAxonActivation
+                system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/axon_allocation.py ', outputDir,' ', num2str(side), ' ', parameterFile])
+                % call axon_allocation script
+            end
+
+            % use OSS-DBS v2 environment
+            system(['leaddbs2ossdbs --hemi_side ', num2str(side), ' ', parameterFile, ...
+                ' --output_path ', outputDir])
+            parameterFile_json = [parameterFile(1:end-3), 'json'];
+            system(['ossdbs ' , parameterFile_json])
+
+            if settings.calcAxonActivation
+                % call the NEURON module
+                % copy NEURON folder to the stimulation folder
+                leaddbs_neuron = [ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/Axon_files'];
+                neuron_folder = fullfile(outputDir,'Axon_files');
+                copyfile(leaddbs_neuron, neuron_folder)
+                folder2save = [outputDir,filesep,'Results_', sideCode];
+                timeDomainSolution = [outputDir,filesep,'Results_', sideCode, filesep, 'oss_time_result_PAM.h5'];
+                pathwayParameterFile = [outputDir,filesep, 'Allocated_axons_parameters.json'];
+                scaling = 1.0;
+
+                system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/PAM_caller.py ', neuron_folder, ' ', folder2save,' ', timeDomainSolution, ' ', pathwayParameterFile, ' ', num2str(scaling), ' ', num2str(i)])
+            end
+            ea_delete([outputDir, filesep, 'Allocated_axons.h5'])
+            ea_delete([folder2save,filesep,'oss_time_result_PAM.h5'])
+        end
+        ea_get_probab_axon_state(folder2save,1,strcmp(settings.butenko_intersectStatus,'activated'))
+    else
+        if settings.calcAxonActivation
+            ea_delete([outputDir, filesep, 'Allocated_axons.h5']);
+            system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/axon_allocation.py ', outputDir,' ', num2str(side), ' ', parameterFile]);
+            % call axon_allocation script
+        end
+    
+        % use OSS-DBS v2 environment
+        system(['leaddbs2ossdbs --hemi_side ', num2str(side), ' ', parameterFile, ...
+            ' --output_path ', outputDir]);
+        parameterFile_json = [parameterFile(1:end-3), 'json'];
+        system(['ossdbs ' , parameterFile_json]);
+    
+        if settings.calcAxonActivation
+            % copy NEURON folder to the stimulation folder 
+            leaddbs_neuron = [ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/Axon_files'];
+            neuron_folder = fullfile(outputDir,'Axon_files');
+            copyfile(leaddbs_neuron, neuron_folder)
+    
+            % call the NEURON module
+            folder2save = [outputDir,filesep,'Results_', sideCode];
+            timeDomainSolution = [outputDir,filesep,'Results_', sideCode, filesep, 'oss_time_result_PAM.h5'];
+            pathwayParameterFile = [outputDir,filesep, 'Allocated_axons_parameters.json'];
+    
+            system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/PAM_caller.py ', neuron_folder, ' ', folder2save,' ', timeDomainSolution, ' ', pathwayParameterFile, ' ', num2str(1.0)]);
+        end
     end
 
-    % use OSS-DBS v2 environment
-    system(['leaddbs2ossdbs --hemi_side ', num2str(side), ' ', parameterFile, ...
-        ' --output_path ', outputDir]);
-    parameterFile_json = [parameterFile(1:end-3), 'json'];
-    system(['ossdbs ' , parameterFile_json]);
-
-    if settings.calcAxonActivation
-        % copy NEURON folder to the stimulation folder 
-        leaddbs_neuron = [ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/Axon_files'];
-        neuron_folder = fullfile(outputDir,'Axon_files');
-        copyfile(leaddbs_neuron, neuron_folder)
-
-        % call the NEURON module
-        folder2save = [outputDir,filesep,'Results_', sideCode];
-        timeDomainSolution = [outputDir,filesep,'Results_', sideCode, filesep, 'oss_time_result_PAM.h5'];
-        pathwayParameterFile = [outputDir,filesep, 'Allocated_axons_parameters.json'];
-
-        system(['python ', ea_getearoot, 'ext_libs/OSS-DBS/Axon_Processing/PAM_caller.py ', neuron_folder, ' ', folder2save,' ', timeDomainSolution, ' ', pathwayParameterFile]);
+    % clean-up for outOfCore
+    if settings.outOfCore == 1
+        ea_delete([outputDir, filesep, 'Results_',sideCode,filesep,'oss_freq_domain_tmp_PAM.hdf5']);
     end
 
     % Check if OSS-DBS calculation is finished
@@ -645,9 +704,18 @@ for side=0:1
         end
 
 
-        axonState = ea_regexpdir([outputDir, filesep, 'Results_', sideCode], 'Axon_state.*\.mat', 0);
+        if prob_PAM 
+            axonStateProb = ea_regexpdir([outputDir, filesep, 'Results_', sideCode], 'Axon_state.*\_prob.mat', 0);
+            axonState = axonStateProb;
+        else
+            axonState = ea_regexpdir([outputDir, filesep, 'Results_', sideCode], 'Axon_state.*\.mat', 0);
+        end
         if ~isempty(axonState)
             for f=1:length(axonState)
+
+                if prob_PAM
+                    axonState{f} = strrep(axonState{f},'_prob','');
+                end
 
                 % Determine tract name
                 if startsWith(settings.connectome, 'Multi-Tract: ')
@@ -655,6 +723,7 @@ for side=0:1
                 end
 
                 % If stimSetMode, extract the index from tractName (but axonState is still checked on the indexed file)
+                % 
                 if settings.stimSetMode
                     if startsWith(settings.connectome, 'Multi-Tract: ')
                         stimProt_index = regexp(tractName, '(?<=_)\d+$', 'match', 'once');
@@ -665,7 +734,11 @@ for side=0:1
                 end
 
                 % Get fiber id and state from OSS-DBS result
-                ftr = load(axonState{f});
+                if prob_PAM
+                    ftr = load(axonStateProb{f});
+                else
+                    ftr = load(axonState{f});
+                end
                 [fibId, ind] = unique(ftr.fibers(:,4));
 
                 fibState = ftr.fibers(ind,5);
@@ -698,10 +771,13 @@ for side=0:1
                 % Reset original fiber id as in the connectome
                 ftr.fibers(:,4) = originalFibID;
 
-                if strcmp(settings.butenko_intersectStatus,'activated')
-                    ftr.fibers(ftr.fibers(:,5) == -1 | ftr.fibers(:,5) == -3, 5) = 1;
-                elseif strcmp(settings.butenko_intersectStatus,'activated_at_active_contacts')
-                    ftr.fibers = OSS_DBS_Damaged2Activated(settings,ftr.fibers,ftr.idx,side+1);
+                if ~prob_PAM
+                    if strcmp(settings.butenko_intersectStatus,'activated')
+                        ftr.fibers(ftr.fibers(:,5) == -1,5) = 1;
+                        ftr.fibers(ftr.fibers(:,5) == -3,5) = 1;
+                    elseif strcmp(settings.butenko_intersectStatus,'activated_at_active_contacts')
+                        ftr.fibers = OSS_DBS_Damaged2Activated(settings,ftr.fibers,ftr.idx,side+1);
+                    end
                 end
 
                 % Save result for visualization
@@ -716,6 +792,7 @@ for side=0:1
                         fiberActivation = [resultProtocol, filesep, subSimPrefix, 'fiberActivation_model-ossdbs_hemi-', sideLabel,'_prot-', stimProt_index, '.mat'];
                     end
                 else
+                    % for now use the same name for probabilistic
                     if startsWith(settings.connectome, 'Multi-Tract: ')
                         fiberActivation = [outputBasePath, 'fiberActivation_model-ossdbs_hemi-', sideLabel, '_tract-', tractName, '.mat'];
                     else
@@ -786,7 +863,12 @@ for side=0:1
                 if ~settings.stimSetMode
                     if exist('resultfig', 'var')
                         set(0, 'CurrentFigure', resultfig);
-                        ea_fiberactivation_viz(fiberActivation, resultfig);
+                        if prob_PAM
+                            disp('load manually')
+                            %ea_plot_prob_fiber_state(fiberActivation);
+                        else
+                            ea_fiberactivation_viz(fiberActivation, resultfig);
+                        end
                     end
                 end
             end
@@ -800,7 +882,6 @@ for side=0:1
 
     % Clean up
     ea_delete([outputDir, filesep, 'Brain_substitute.brep']);
-    %ea_delete([outputDir, filesep, 'Allocated_axons.h5']);
     %ea_delete(ea_regexpdir(outputDir, '^(?!Current_protocols_).*\.csv$', 0));
     % ea_delete([outputDir, filesep, '*.py']);
 

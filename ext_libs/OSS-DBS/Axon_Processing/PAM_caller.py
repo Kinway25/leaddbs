@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-def launch_PAM(neuron_folder, folder_to_save, points_h5_file, pathways_params_file, scaling, scaling_index=None):
+def launch_PAM(neuron_folder, folder_to_save, points_h5_file, pathways_params_file, scaling, scaling_index=None, special_suffix=None):
     """
     Parameters
     ----------
@@ -73,7 +73,7 @@ def launch_PAM(neuron_folder, folder_to_save, points_h5_file, pathways_params_fi
             'connectome_name': pathways_dict['connectome_name'],
         }
 
-        pathwayNEURON = NeuronStimulation(pathway_dict, signal_dict, folder_to_save, None, scaling_index)
+        pathwayNEURON = NeuronStimulation(pathway_dict, signal_dict, folder_to_save, None, scaling_index, special_suffix)
         pathwayNEURON.check_pathway_activation(pathway_dataset)
 
         pathway_idx += 1
@@ -107,4 +107,6 @@ if __name__ == '__main__':
     else:
         scaling_index = None
 
-    launch_PAM(neuron_folder, folder_to_save, points_h5_file, pathways_params_file, scaling, scaling_index)
+    print(sys.argv[1:][6])
+
+    launch_PAM(neuron_folder, folder_to_save, points_h5_file, pathways_params_file, scaling, scaling_index, sys.argv[1:][6])

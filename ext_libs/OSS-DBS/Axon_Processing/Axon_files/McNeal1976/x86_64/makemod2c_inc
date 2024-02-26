@@ -1,0 +1,32 @@
+./fh.c: ../fh.mod
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "..";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "fh.mod" -o "/home/netstim/leaddbs_git/ext_libs/OSS-DBS/Axon_Processing/Axon_files/McNeal1976/x86_64")
+
+./fh.o: ./fh.c
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) $<\\n"
+	$(COMPILE) -I".." $(INCLUDES) -fPIC -c $< -o $@
+
+./fsquare.c: ../fsquare.mod
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "..";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "fsquare.mod" -o "/home/netstim/leaddbs_git/ext_libs/OSS-DBS/Axon_Processing/Axon_files/McNeal1976/x86_64")
+
+./fsquare.o: ./fsquare.c
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) $<\\n"
+	$(COMPILE) -I".." $(INCLUDES) -fPIC -c $< -o $@
+
+./fzap.c: ../fzap.mod
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "..";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "fzap.mod" -o "/home/netstim/leaddbs_git/ext_libs/OSS-DBS/Axon_Processing/Axon_files/McNeal1976/x86_64")
+
+./fzap.o: ./fzap.c
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) $<\\n"
+	$(COMPILE) -I".." $(INCLUDES) -fPIC -c $< -o $@
+
+./xstim.c: ../xstim.mod
+	@printf " -> $(C_GREEN)NMODL$(C_RESET) $<\\n"
+	(cd "..";  MODLUNIT=$(NRNUNITS) $(NOCMODL) "xstim.mod" -o "/home/netstim/leaddbs_git/ext_libs/OSS-DBS/Axon_Processing/Axon_files/McNeal1976/x86_64")
+
+./xstim.o: ./xstim.c
+	@printf " -> $(C_GREEN)Compiling$(C_RESET) $<\\n"
+	$(COMPILE) -I".." $(INCLUDES) -fPIC -c $< -o $@
+
