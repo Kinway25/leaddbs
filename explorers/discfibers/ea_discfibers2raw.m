@@ -10,14 +10,10 @@ load(discfiber, 'vals')
 
 if size(fibcell,2) == 2
     fibcell = vertcat(fibcell{:});
-elseif size(fibcell,2) == 1
-    fibcell = fibcell{:};
 end
 
 if iscell(vals) && size(vals,2) == 2
     vals = vertcat(vals{:});
-elseif iscell(vals) && size(vals,2) == 1
-    vals = vals{:};
 end
 
 % Set reference images
@@ -30,7 +26,7 @@ idx = cellfun(@(x) size(x,1), fibcell);
 endIndex = cumsum(idx);
 startIndex = [1;endIndex+1];
 startIndex = startIndex(1:end-1);
-fibIndex = arrayfun(@(x,y) (x:y)', startIndex, endIndex, 'Uni', 0);
+fibIndex = arrayfun(@(x,y) [x:y]', startIndex, endIndex, 'Uni', 0);
 
 fibersMNIVox = ea_mm2vox(cell2mat(fibcell), refMNI)';
 % Convert discfibers from MNI space to anchor space
@@ -46,7 +42,7 @@ fibcellAnchor = cellfun(@(x) fibersAnchor(x,:), fibIndex, 'Uni', 0);
 % Save discfibers in anchor space
 fibcell = fibcellAnchor;
 outputMAT = regexprep(discfiber, '\.mat$', 'Anchor.mat');
-save(outputMAT, 'fibcell', 'vals');
+save(outputMAT, 'fibcell', 'opts', 'vals');
 
 % Register anchor to raw anchor
 options = ea_getptopts(patientdir);

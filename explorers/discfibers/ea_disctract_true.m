@@ -217,6 +217,13 @@ classdef ea_disctract < handle
         end
         function calculate(obj)
 
+            switch obj.connectivity_type
+                case 2 % PAM
+                    obj.M.vatmodel = 'OSS-DBS (Butenko 2020)';
+                otherwise % Stim. volumes
+                    obj.M.vatmodel= 'SimBio/FieldTrip (see Horn 2017)';
+            end
+
             % check that this has not been calculated before:
             if ~isempty(obj.results) % something has been calculated
                 if isfield(obj.results,ea_conn2connid(obj.connectome))
@@ -272,7 +279,18 @@ classdef ea_disctract < handle
                 otherwise     % check fiber recruitment via intersection with VTA
                     if isfield(obj.M,'pseudoM')
                         vatlist = obj.M.ROI.list;
-                    else
+%                         numPatient = length(obj.allpatients);
+%                         vatlist = cell(numPatient*2,2);
+%                          for i = 1:numPatient
+%                              vatlist{i,1} = obj.M.ROI.list{i,1};
+%                              vatlist{i,2} = obj.M.ROI.list{i,2};
+%                          end
+%                          
+%                          for i = numPatient+1 : numPatient*2
+%                              vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_left.nii'];
+%                              vatlist{i,2} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_right.nii'];
+%                          end
+                     else
                         vatlist = ea_discfibers_getvats(obj);
                     end
                     ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
@@ -649,8 +667,8 @@ classdef ea_disctract < handle
 
             end
 
-            % check if binary variable and not permutation test
-            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1
+            % check if binary variable
+            if all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1
                 % average across sides. This might be wrong for capsular response.
                 Ihat_av_sides = ea_nanmean(Ihat,2);
 
@@ -665,45 +683,45 @@ classdef ea_disctract < handle
 
             end
 
-            if ~silent
-                % plot patient score correlation matrix over folds
-                if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
-                    if cvp.NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
-
-                        % put training and test scores together
-                        Ihat_combined = cell(1,cvp.NumTestSets);
-                        %Ihat_combined = Ihat_train_global;
-                        for c=1:cvp.NumTestSets
-                            if isobject(cvp)
-                                training = cvp.training(c);
-                                test = cvp.test(c);
-                            elseif isstruct(cvp)
-                                training = cvp.training{c};
-                                test = cvp.test{c};
-                            end
-
-                            Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
-                            Ihat_combined{c}(test,1) = Ihat(test,1);
-                        end
-
-                        r_Ihat = zeros(size(Ihat_combined,2));
-
-                        for i = 1:size(r_Ihat,1)
-                            for j = 1:size(r_Ihat,1)
-                                [r_Ihat(i,j),~]=ea_permcorr(Ihat_combined{i},Ihat_combined{j},'spearman');
-                            end
-                        end
-
-                        figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
-                        imagesc(triu(r_Ihat)); % Display correlation matrix as an image
-                        title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
-                        colormap('bone');
-                        cb = colorbar;
-                        % set(cb)
-
-                    end
-                end
-            end
+%             if ~silent
+%                 % plot patient score correlation matrix over folds
+%                 if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
+%                     if cvp.NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
+% 
+%                         % put training and test scores together
+%                         Ihat_combined = cell(1,cvp.NumTestSets);
+%                         %Ihat_combined = Ihat_train_global;
+%                         for c=1:cvp.NumTestSets
+%                             if isobject(cvp)
+%                                 training = cvp.training(c);
+%                                 test = cvp.test(c);
+%                             elseif isstruct(cvp)
+%                                 training = cvp.training{c};
+%                                 test = cvp.test{c};
+%                             end
+% 
+%                             Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
+%                             Ihat_combined{c}(test,1) = Ihat(test,1);
+%                         end
+% 
+%                         r_Ihat = zeros(size(Ihat_combined,2));
+% 
+%                         for i = 1:size(r_Ihat,1)
+%                             for j = 1:size(r_Ihat,1)
+%                                 [r_Ihat(i,j),~]=ea_permcorr(Ihat_combined{i},Ihat_combined{j},'spearman');
+%                             end
+%                         end
+% 
+%                         figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
+%                         imagesc(triu(r_Ihat)); % Display correlation matrix as an image
+%                         title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
+%                         colormap('bone');
+%                         cb = colorbar;
+%                         % set(cb)
+% 
+%                     end
+%                 end
+%             end
             if obj.nestedLOO
                 % cvs = 'L-O-O-O';
                 % h = ea_corrbox(Improvement,Predicted_dif_models,'permutation',{['Disc. Fiber prediction ',upper(cvs)],empiricallabel,fibscorelabel});

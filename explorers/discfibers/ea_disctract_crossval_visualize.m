@@ -13,6 +13,7 @@ else
 end
 
 groupID = tractset.M.patient.group(sel);
+groupID(:) = 1;
 groupColors = tractset.M.groups.color(unique(groupID),:);
 groupColors = rgb2hsv(groupColors);
 groupColors(:,2) = groupColors(:,2)+((1-groupColors(:,2))/2);

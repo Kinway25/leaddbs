@@ -21,7 +21,19 @@ connFiberInd = cell(1, numSide);
 
 totalFibers = length(idx); % total number of fibers in the connectome to work with global indices
 
+%pts_paths = ea_regexpdir('/media/konstantin/Konstantin/StimFit_Cohort/StimFitBIDS/derivatives/leaddbs','sub-*',0,'d',0);
+%connectome_name = 'PetUpdatedMerged';
+
 for side = 1:numSide
+
+    pt_counter = 1;
+
+%     if side == 1
+%         side_tag = '_rh';
+%     else
+%         side_tag = '_lh';
+%     end
+
     fibsvalBin{side} = zeros(length(idx), numPatient);
     fibsvalSum{side} = zeros(length(idx), numPatient);
     fibsvalMean{side} = zeros(length(idx), numPatient);
@@ -30,6 +42,13 @@ for side = 1:numSide
 
     disp(['Calculate for side ', num2str(side), ':']);
     for pt = 1:numPatient
+
+        if contains(vatlist{pt,side},'hemi-R')
+            side_tag = '_rh';
+        else
+            side_tag = '_lh';
+        end
+
         disp(['VAT ', num2str(pt, ['%0',num2str(numel(num2str(numPatient))),'d']), '/', num2str(numPatient), '...']);
         if isstruct(vatlist) % direct nifti structs supplied
             vat = vatlist(pt,side);
@@ -74,10 +93,27 @@ for side = 1:numSide
         vals = cellfun(@(fib) vat.img(intersect(fib, vatInd)), fibVoxInd(connected), 'Uni', 0);
 
         % Generate fibsval for the Spearman's correlation method
+
+        % instead of 5Peak, use max(E-proj)
+        [~,pts,~] = fileparts(vatlist{pt,side}(1:end-35));
+        pts_path = ['/media/konstantin/Konstantin/StimFit_Cohort/StimFitBIDS/derivatives/leaddbs/',pts];
+        if contains(vatlist{pt,side},'20230506011354')
+            file_E_proj = [pts_path,filesep,'miscellaneous',filesep,connectome_name,filesep,'Eproj_20230506011354',side_tag,filesep,'E_peak.mat'];
+        else
+            file_E_proj = [pts_path,filesep,'miscellaneous',filesep,connectome_name,filesep,'Eproj_06stimfit',side_tag,filesep,'E_peak.mat'];
+        end
+        E_proj = load(file_E_proj);
+        fibsval5Peak{side}(trimmedFiberInd(connected), pt) = E_proj.E_peak(trimmedFiberInd(connected))*1000.0;
+        pt_counter = pt_counter + 1;
+
+        if rem(pt_counter-1,35) 
+            pt_counter = 1;
+        end
+
         fibsvalSum{side}(trimmedFiberInd(connected), pt) = cellfun(@sum, vals);
         fibsvalMean{side}(trimmedFiberInd(connected), pt) = cellfun(@mean, vals);
         fibsvalPeak{side}(trimmedFiberInd(connected), pt) = cellfun(@max, vals);
-        fibsval5Peak{side}(trimmedFiberInd(connected), pt) = cellfun(@(x) mean(maxk(x,ceil(0.05*numel(x)))), vals);
+        %fibsval5Peak{side}(trimmedFiberInd(connected), pt) = cellfun(@(x) mean(maxk(x,ceil(0.05*numel(x)))), vals);
     end
 
     % Remove values for not connected fibers, convert to sparse matrix
