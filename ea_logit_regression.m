@@ -10,13 +10,155 @@ if Ihat_train == 0
     Ihat_train = Ihat(training);
 end
 
-% first, we fit a logit function for our binary prediction
-mdl = fitglm(Ihat_train,Improvement(training),'Distribution','binomial','Link','logit');
 
+% % % let's iterate only over training and create a table
+% I_training = Improvement(training);
+% for pt_j = 1:length(gpatsel)
+% 
+%     if training(pt_j) == 1
+%         temp2=strsplit(obj.M.patient.list{gpatsel(pt_j)},'_');
+%         pt_ID2 = temp2{2}; 
+%         %trajDepth2 = temp2{end}(4:end);
+%         side2 = temp2{3};
+%         side_label = side2;
+%         
+%         if contains(obj.M.patient.list{gpatsel(pt_j)}, '_fl.')
+%             amp = str2num(temp2{end-1}(1:3));
+%             trajDepth2 = temp2{end-1}(4:end);
+%         else
+%             amp = str2num(temp2{end}(1:3));
+%             trajDepth2 = temp2{end}(4:end);
+%         end
+% 
+%         row_to_add = {pt_ID2,trajDepth2,side_label,Ihat(pt_j),amp, Improvement(pt_j)};
+%         if ~exist('PatientsIntraOp_FF','var')
+%             PatientsIntraOp_FF = table;
+%             PatientsIntraOp_FF.Code = pt_ID2;
+%             PatientsIntraOp_FF.TrajDepth = trajDepth2;
+%             PatientsIntraOp_FF.Side = side_label;
+%             PatientsIntraOp_FF.FF_score = Ihat(pt_j);
+%             PatientsIntraOp_FF.ClinAny = amp;
+%             PatientsIntraOp_FF.Response = Improvement(pt_j);
+%         else
+%             PatientsIntraOp_FF = [PatientsIntraOp_FF;row_to_add];
+%         end
+%     end
+% end
+% 
+% PatientsIntraOp_FF.Code = categorical(PatientsIntraOp_FF.Code);
+% PatientsIntraOp_FF.FF_score = zscore(PatientsIntraOp_FF.FF_score);
+% 
+% % %writetable(PatientsIntraOp_FF,'/home/konstantin/Documents/Data/JR/JR_flipped/FF_Train_Table_V2_low_sigma.csv')
+% % 
+% % glme = fitglme(PatientsIntraOp_FF,'Response~FF_score+(1|Code)','Distribution','Binomial','Link','logit');
+% % 
+% let's iterate over test with effect and create a table
+I_test = Improvement(test);
+counter = 0;
+for pt_j = 1:length(gpatsel)
+
+    if test(pt_j) == 1
+
+        counter = counter + 1;
+
+        temp2=strsplit(obj.M.patient.list{gpatsel(pt_j)},'_');
+        pt_ID2 = temp2{2}; 
+        %trajDepth2 = temp2{end}(4:end);
+        side2 = temp2{3};
+        side_label = side2;
+        
+        if contains(obj.M.patient.list{gpatsel(pt_j)}, '_fl.')
+            amp = str2num(temp2{end-1}(1:3));
+            trajDepth2 = temp2{end-1}(4:end);
+        else
+            amp = str2num(temp2{end}(1:3));
+            trajDepth2 = temp2{end}(4:end);
+        end
+
+        row_to_add = {pt_ID2,trajDepth2,side_label,Ihat(pt_j),amp, Improvement(pt_j)};
+        if ~exist('PatientsIntraOpTest_FF','var')
+            PatientsIntraOpTest_FF = table;
+            PatientsIntraOpTest_FF.Code = pt_ID2;
+            PatientsIntraOpTest_FF.TrajDepth = trajDepth2;
+            PatientsIntraOpTest_FF.Side = side_label;
+            PatientsIntraOpTest_FF.FF_score = Ihat(pt_j);
+            PatientsIntraOpTest_FF.ClinAny = amp;
+            PatientsIntraOpTest_FF.Response = Improvement(pt_j);
+        else
+            PatientsIntraOpTest_FF = [PatientsIntraOpTest_FF;row_to_add];
+        end
+    end
+end
+
+PatientsIntraOpTest_FF.Code = categorical(PatientsIntraOpTest_FF.Code);
+PatientsIntraOpTest_FF.FF_score = zscore(PatientsIntraOpTest_FF.FF_score);
+% %writetable(PatientsIntraOpTest_FF,'/home/konstantin/Documents/Data/JR/JR_flipped/FF_Test_Table_V2_low_sigma.csv')
+% 
+glme2 = fitglme(PatientsIntraOpTest_FF,'Response~FF_score+(1|Code)','Distribution','Binomial','Link','logit','FitMethod','Laplace');
+
+% figure
+% plotResiduals(glme2,'fitted','ResidualType','Pearson')
+% % 
+% predicted_response = predict(glme,PatientsIntraOpTest_FF);
+% predicted_response2 = predict(glme2,PatientsIntraOpTest_FF);
+% predicted_response3 = predict(mdl_test,PatientsIntraOpTest_FF);
+% 
+% bin_resp = predicted_response >= scores_thresh;
+% bin_resp2 = predicted_response2 >= 0.5;
+% bin_resp2 = predicted_response2 >= 0.5;
+% false_positives = 0;
+% false_negatives = 0;
+% false_positives2 = 0;
+% false_negatives2 = 0;
+% false_positives3 = 0;
+% false_negatives3 = 0;
+% 
+% for i = 1:size(PatientsIntraOpTest_FF,1)
+% 
+%     if PatientsIntraOpTest_FF.Response(i) == 0 && bin_resp(i) == 1
+%         false_positives = false_positives + 1;
+%     elseif PatientsIntraOpTest_FF.Response(i) == 1 && bin_resp(i) == 0
+%         false_negatives = false_negatives + 1;
+%     end
+% 
+% %     if PatientsIntraOpTest_FF.Response(i) == 0 && bin_resp2(i) == 1
+% %         false_positives2 = false_positives2 + 1;
+% %     elseif PatientsIntraOpTest_FF.Response(i) == 1 && bin_resp2(i) == 0
+% %         false_negatives2 = false_negatives2 + 1;
+% %     end
+% end
+% 
+% % first, we fit a logit function for our binary prediction
+% mdl_test = fitglm(PatientsIntraOpTest_FF,'Response~FF_score','Distribution','binomial','Link','logit');
+% 
+% % second, we run ROC curve analysis
+% scores = mdl_test.Fitted.Probability;
+% scores = glme.Fitted;
+% [X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
+% if disp_regression_plots
+%     figure, plot(X,Y, 'k', 'linew', 1.5)
+%     set(gcf,'color','w');
+%     hold on
+%     plot(OPTROCPT(1),OPTROCPT(2),'ro', 'MarkerSize',10)
+%     xlabel('False positive rate') 
+%     ylabel('True positive rate')
+%     txt = ['AUC: ' num2str(AUC)];
+%     text(0.7,0.1,txt)
+%     title('ROC for Classification by Logistic Regression')
+% end
+% % optimal threshold on the classifier
+% scores_thresh = T((X==OPTROCPT(1))&(Y==OPTROCPT(2)));
+% 
+% % mdl = fitglm(zscore(Ihat_train),Improvement(training),'Distribution','binomial','Link','logit');
+
+%mdl = fitglm(Ihat_train,Improvement(training),'Distribution','binomial','Link','logit');
+mdl = fitglm(Ihat(test),Improvement(test),'Distribution','binomial','Link','logit');
 
 % second, we run ROC curve analysis
-scores = mdl.Fitted.Probability;
-[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
+%scores = mdl.Fitted.Probability;
+%[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
+scores = glme2.Fitted;
+[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(test),scores,1);
 if disp_regression_plots
     figure, plot(X,Y, 'k', 'linew', 1.5)
     set(gcf,'color','w');
@@ -72,7 +214,10 @@ end
 
 
 % prediction for test based on the logit model
-scores_test = predict(mdl,Ihat(test));
+%scores_test = predict(mdl,Ihat(test));
+scores_test = predict(glme2,PatientsIntraOpTest_FF);
+
+
 Ihat_prediction = scores_test > scores_thresh;
 
 % get the confussion matrix (this can be done on the test set now)
@@ -114,6 +259,7 @@ depths_max = -1*ones(39,1);
 lost_prediction = 0;
 total_predictions = 0;
 amps_not_predicted = [];
+all_predicted_amps = [];
 
 while pt_i <= length(gpatsel)-1
     temp=strsplit(obj.M.patient.list{gpatsel(pt_i)},'_');
@@ -169,7 +315,7 @@ while pt_i <= length(gpatsel)-1
 
                 if I_test(pt_j) == 1 && ~any(contains(amp_checked, trajDepth2)) 
 
-                    if strcmp(pt_ID, 'MNI/mvwcN7XHeFRkCkMeNVuupT')
+                    if strcmp(pt_ID, 'MNI/SBNC46CB')
                         disp("here")
                     end
 
@@ -246,7 +392,7 @@ while pt_i <= length(gpatsel)-1
         lost_prediction = lost_prediction + (true_resp-length(amps_sorted_side));
         total_predictions = total_predictions + true_resp;
 
-         if strcmp(pt_ID, 'MNI/mvwcN7XHeFRkCkMeNVuupT')
+         if strcmp(pt_ID, 'MNI/SBNC46CB')
              disp("check")
          end
 
@@ -325,6 +471,8 @@ while pt_i <= length(gpatsel)-1
 
     pt_i = pt_j;
 
+    all_predicted_amps = [all_predicted_amps;amps_predicted'];
+
 %     % check only the response ones
 %     if Improvement(test(pt_i))  == 1
 % 
@@ -339,6 +487,9 @@ end
 
 %disp("depths_max")
 %disp(depths_max)
+
+%figure
+%histogram(all_predicted_amps,[0,1,2,3,4,5,6,7,8,9])
 
 disp("Number of lost electrode predictions")
 disp(lost_prediction)
