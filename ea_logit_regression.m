@@ -91,10 +91,60 @@ for pt_j = 1:length(gpatsel)
 end
 
 PatientsIntraOpTest_FF.Code = categorical(PatientsIntraOpTest_FF.Code);
-PatientsIntraOpTest_FF.FF_score = zscore(PatientsIntraOpTest_FF.FF_score);
+%PatientsIntraOpTest_FF.FF_score = zscore(PatientsIntraOpTest_FF.FF_score);
 % %writetable(PatientsIntraOpTest_FF,'/home/konstantin/Documents/Data/JR/JR_flipped/FF_Test_Table_V2_low_sigma.csv')
 % 
-glme2 = fitglme(PatientsIntraOpTest_FF,'Response~FF_score+(1|Code)','Distribution','Binomial','Link','logit','FitMethod','Laplace');
+%glme2 = fitglme(PatientsIntraOpTest_FF,'Response~FF_score+(1|Code)','Distribution','Binomial','Link','logit','FitMethod','Laplace');
+
+
+
+% let's predict post-op
+
+counter = 0;
+for pt_j = 1:length(gpatsel)
+
+    if test(pt_j) == 1
+
+        counter = counter + 1;
+
+        temp2=strsplit(obj.M.patient.list{gpatsel(pt_j)},'_');
+        pt_ID2 = temp2{2}; 
+        %trajDepth2 = temp2{end}(4:end);
+        if contains(obj.M.patient.list{gpatsel(pt_j)},'left')
+            side2 = 'left';
+        else
+            side2 = 'right';
+        end
+        %side2 = temp2{3};
+        side_label = side2;
+        
+        amp = temp2{end-1};
+        contact_N = temp2{end}(1);
+
+        row_to_add = {pt_ID2,contact_N,side_label,Ihat(pt_j),amp};
+        if ~exist('PatientsPostOpTest_FF','var')
+            PatientsPostOpTest_FF = table;
+            PatientsPostOpTest_FF.Code = pt_ID2;
+            PatientsPostOpTest_FF.Contact = contact_N;
+            PatientsPostOpTest_FF.Side = side_label;
+            PatientsPostOpTest_FF.FF_score = Ihat(pt_j);
+            PatientsPostOpTest_FF.Amp = amp;
+            %PatientsPostOpTest_FF.Response = Improvement(pt_j);
+        else
+            PatientsPostOpTest_FF = [PatientsPostOpTest_FF;row_to_add];
+        end
+    end
+end
+
+PatientsPostOpTest_FF.Code = categorical(PatientsPostOpTest_FF.Code);
+%PatientsPostOpTest_FF.FF_score = zscore(PatientsPostOpTest_FF.FF_score);
+scores_test = predict(glme2,PatientsPostOpTest_FF);
+Ihat_prediction = scores_test > 0.5913;
+%Ihat_prediction = scores_test > 0.7023;
+PatientsPostOpTest_FF.Response = Ihat_prediction;
+
+scores_test = predict(mdl,Ihat(test));
+
 
 % figure
 % plotResiduals(glme2,'fitted','ResidualType','Pearson')

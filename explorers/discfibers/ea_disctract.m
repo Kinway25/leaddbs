@@ -289,13 +289,13 @@ classdef ea_disctract < handle
                         if isfield(obj.M,'pseudoM')
     
                             vatlist = obj.M.ROI.list;
-                            for i = 1:size(vatlist,1)
-                                if contains(obj.M.patient.list{i}, '_fl.')
-                                    vatlist{i,1} = ['/media/konstantin/LaCie/backup/JR/all_MNI_low_sigma',obj.M.ROI.list{i,1}(40:end-7),'.nii'];
-                                else
-                                    vatlist{i,1} = ['/media/konstantin/LaCie/backup/JR/all_MNI_low_sigma',obj.M.ROI.list{i,1}(40:end)];
-                                end
-                            end
+%                             for i = 1:size(vatlist,1)
+%                                 if contains(obj.M.patient.list{i}, '_fl.')
+%                                     vatlist{i,1} = ['/media/konstantin/LaCie/backup/JR/all_MNI_low_sigma',obj.M.ROI.list{i,1}(40:end-7),'.nii'];
+%                                 else
+%                                     vatlist{i,1} = ['/media/konstantin/LaCie/backup/JR/all_MNI_low_sigma',obj.M.ROI.list{i,1}(40:end)];
+%                                 end
+%                             end
 
 %                             numPatient = length(obj.allpatients);
 %                             vatlist = cell(numPatient*2,2);
@@ -598,11 +598,11 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
-            %threshold_STN_bin = obj.setselections{1,27}(1,obj.patientselection);
-            patientsel_all = find(obj.setselections{1,28}(:))';
-            [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,27});
-            % redefine patientsel for the whole STN cohort
-            patientsel = find(obj.setselections{1,28}(:))';
+%             %threshold_STN_bin = obj.setselections{1,27}(1,obj.patientselection);
+%             patientsel_all = find(obj.setselections{1,28}(:))';
+%             [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,27});
+%             % redefine patientsel for the whole STN cohort
+%             patientsel = find(obj.setselections{1,28}(:))';
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -674,8 +674,8 @@ classdef ea_disctract < handle
                     training = cvp.training(c);
                     test = cvp.test(c);
 
-                    training = training_shell(:,c);
-                    test = test_all(:,c);
+                    %training = training_shell(:,c);
+                    %test = test_all(:,c);
 
                 elseif isstruct(cvp)
                     training = cvp.training{c};
