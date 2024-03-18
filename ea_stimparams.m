@@ -1140,7 +1140,14 @@ for el = 1:length(elstruct)
             ea_busyaction('off',handles.stimfig,'stim');
             return;
         else
-            [~, stimparams] = feval(ea_genvat,getappdata(handles.stimfig,'S'),options,handles.stimfig);
+
+            % load Savir's S
+            load('/home/konstantin/Downloads/S.mat')
+            S.label = stimname;
+            S.model = 'OSS-DBS (Butenko 2020)';
+
+            %[~, stimparams] = feval(ea_genvat,getappdata(handles.stimfig,'S'),options,handles.stimfig);
+            [~, stimparams] = feval(ea_genvat,S,options,handles.stimfig);
             flix = 1;
         end
     else
