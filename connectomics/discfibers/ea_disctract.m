@@ -495,6 +495,7 @@ classdef ea_disctract < handle
         end
 
         function [Improvement, Ihat, actualimprovs, val_struct] = crossval(obj, cvp, Iperm, shuffle, silent)
+
             if ~exist('silent','var')
                 silent=0;
             end
