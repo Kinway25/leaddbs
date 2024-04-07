@@ -275,7 +275,7 @@ classdef ea_disctract < handle
                     else
                         vatlist = ea_discfibers_getvats(obj);
                     end
-                    ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
+                    %ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
 
                     [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell,  connFiberInd, totalFibers] = ea_discfibers_calcvals(vatlist, cfile, obj.calcthreshold);
                     obj.results.(ea_conn2connid(obj.connectome)).('VAT_Ttest').fibsval = fibsvalBin;
