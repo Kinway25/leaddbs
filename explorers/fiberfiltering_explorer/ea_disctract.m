@@ -244,6 +244,15 @@ classdef ea_disctract < handle
             % stores the result in the LeadGroup folder
             % also merges fiberActivation_.._.mat and stores them in
             % stimulation folders
+
+
+            % if already lateralized, temp remove left entries
+            if size(obj.M.S,2) < size(obj.M.patient.list,1)
+                numPatients = size(obj.M.patient.list,1);
+                obj.M.patient.list(numPatients/2 + 1 : numPatients) = [];
+                obj.allpatients(numPatients/2 + 1 : numPatients) = [];
+            end
+
             if obj.multi_pathways == 1
                 [cfile, obj.map_list, obj.pathway_list] = ea_discfibers_merge_pathways(obj);
             else
@@ -277,8 +286,10 @@ classdef ea_disctract < handle
             switch obj.connectivity_type
                 case 2    % if PAM, then just extracts activation states from fiberActivation.mat
                     pamlist = ea_discfibers_getpams(obj);
+                    %[pamlist, obj] = ea_discfibers_getpams_lateral(obj);
                     %[fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam(pamlist, obj, cfile);
                     [fibsvalBin, fibsvalprob,~, ~, ~, fibcell_pam, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam_prob(pamlist, obj, cfile);
+                    %[fibsvalBin, fibsvalprob,~, ~, ~, fibcell_pam, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam_prob_lateral(pamlist, obj, cfile);
                     obj.results.(ea_conn2connid(obj.connectome)).('PAM_probA').fibsval = fibsvalprob;
                     obj.results.(ea_conn2connid(obj.connectome)).('PAM_Ttest').fibsval = fibsvalBin;
                     obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM = connFiberInd;
@@ -292,6 +303,7 @@ classdef ea_disctract < handle
                         vatlist = obj.M.ROI.list;
                     else
                         vatlist = ea_discfibers_getvats(obj);
+                        %[vatlist,obj] = ea_discfibers_getvats_lateral(obj);
                     end
                     %ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
 
@@ -523,6 +535,7 @@ classdef ea_disctract < handle
             if ~exist('shuffle','var') || isempty(shuffle)
                 shuffle=0;
             end
+
             if isnumeric(cvp) % cvp is crossvalind
                 cvIndices = cvp;
                 cvID = unique(cvIndices);
@@ -1114,23 +1127,23 @@ classdef ea_disctract < handle
                 %disp(ea_method2methodid(obj))
                 obj.results.(ea_conn2connid(obj.connectome)).totalFibers = length(idx);
 
-                try
-                    for side = 1:2
-                        if obj.connectivity_type == 2
-                            connFiber = fibers(ismember(fibers(:,4), obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}), 1:3);
-                            obj.results.(ea_conn2connid(obj.connectome)).fibcell{side} = mat2cell(connFiber, idx(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}));
-                        else
-                            connFiber = fibers(ismember(fibers(:,4), obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}), 1:3);
-                            obj.results.(ea_conn2connid(obj.connectome)).fibcell{side} = mat2cell(connFiber, idx(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}));
-                        end
-                    end
-                catch
-                    ea_warndlg("Connectivity indices were not stored. Please recalculate or stay with the same model (VAT or PAM)");
-                    disp("=================== WARNING ========================")
-                    disp("Connectivity indices connFiberInd were not stored")
-                    disp("Recalculate or stay with the same model (VAT or PAM)")
-                    disp("====================================================")
-                end
+%                 try
+%                     for side = 1:2
+%                         if obj.connectivity_type == 2
+%                             connFiber = fibers(ismember(fibers(:,4), obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}), 1:3);
+%                             obj.results.(ea_conn2connid(obj.connectome)).fibcell{side} = mat2cell(connFiber, idx(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}));
+%                         else
+%                             connFiber = fibers(ismember(fibers(:,4), obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}), 1:3);
+%                             obj.results.(ea_conn2connid(obj.connectome)).fibcell{side} = mat2cell(connFiber, idx(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_VAT{side}));
+%                         end
+%                     end
+%                 catch
+%                     ea_warndlg("Connectivity indices were not stored. Please recalculate or stay with the same model (VAT or PAM)");
+%                     disp("=================== WARNING ========================")
+%                     disp("Connectivity indices connFiberInd were not stored")
+%                     disp("Recalculate or stay with the same model (VAT or PAM)")
+%                     disp("====================================================")
+%                 end
             else
                 % legacy support
                 if ~isfield(obj.results.(ea_conn2connid(obj.connectome)),'totalFibers')

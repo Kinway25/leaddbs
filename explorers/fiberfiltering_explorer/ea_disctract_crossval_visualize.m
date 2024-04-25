@@ -14,6 +14,8 @@ end
 
 groupID = tractset.M.patient.group(sel);
 groupColors = tractset.M.groups.color(unique(groupID),:);
+%groupColors = tractset.M.groups.color(1,:);
+%groupColors = [groupColors; 1 0 0];
 groupColors = rgb2hsv(groupColors);
 groupColors(:,2) = groupColors(:,2)+((1-groupColors(:,2))/2);
 groupColors = hsv2rgb(groupColors);

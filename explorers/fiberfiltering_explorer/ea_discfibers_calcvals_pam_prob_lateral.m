@@ -1,17 +1,14 @@
 function [fibsvalBin, fibsvalProb, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals_pam_prob(pamlist, obj, cfile)
 % Extract fiber connection values from OSS-DBS results (for a particular connectome)
-% use "probabilistic" PAM results
+% treat right and left electrodes separately (lateralization)
 
 disp('Load Connectome...');
 load(cfile, 'fibers', 'idx');
 
-PAM_mirror_enabled = 1;
-if PAM_mirror_enabled == 1
-    numPatient = length(obj.allpatients)*2; 
-else
-    numPatient = length(obj.allpatients);  % no mirroring
-end
-numSide = 2; % hardcoded for now (as in ...getvats.m)
+% already doubled in ea_discfibers_getpams_lateral.m
+numPatient = length(obj.allpatients);  % no mirroring
+
+numSide = 1; 
 
 fibsvalBin = cell(1, numSide);
 fibsvalProb = cell(1, numSide);
@@ -50,16 +47,16 @@ for side = 1:numSide
             fib_state = zeros(total_fibers,1);
             last_loc_i = 1;  
 
-            if pt <= length(obj.allpatients)
+            if pt <= length(obj.allpatients) / 2
 
-                % original activations across all pathways and fibers               
+                % right side activations are just loaded               
                 for fib_i = 1:total_fibers
                     fib_state(fib_i) = fib_state_raw.fibers(last_loc_i,5);
                     last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
                 end
             else
-
-                % excessive step, but simplifies logic
+    
+                % left side activations need to be flipped to the right
                 fib_state_non_mirror = zeros(total_fibers,1);
                 for fib_i = 1:total_fibers
                      fib_state_non_mirror(fib_i) = fib_state_raw.fibers(last_loc_i,5);
