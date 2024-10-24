@@ -424,7 +424,7 @@ classdef ea_disctract < handle
             end
 
             % warp connectome to native space and compute E-field metrics
-            ea_get_Eproj(obj,vatlist)
+            %ea_get_Eproj(obj,vatlist)
 
             % load e-field projection metrics 
             [fibsvalBin_proj, fibsvalSum_proj, fibsvalMean_proj, fibsvalPeak_proj, fibsval5Peak_proj, fibcell_proj, connFiberInd_proj,fibsvalBin_magn, fibsvalSum_magn, fibsvalMean_magn, fibsvalPeak_magn, fibsval5Peak_magn, fibcell_magn, connFiberInd_magn, totalFibers] = ea_discfibers_native_calcvals(vatlist, cfile, space, obj);
@@ -1406,7 +1406,7 @@ classdef ea_disctract < handle
             end
 
             % print number of significant displayed fibers per pathway (atm only for binary metrics)
-            if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
+            if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'VAT_Ttest_proj') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn') || isequal(ea_method2methodid(obj),'plainconn_proj'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
                 %disp("number of drawn fibers per pathway")
                 num_per_path = cell(1, 2); % with obj.map_list, rates can be computed
                 for side = 1:size(usedidx,2)
@@ -1437,32 +1437,32 @@ classdef ea_disctract < handle
                 end
 
                 % uncomment to create pie plots of pathways metrics
-%                 figure
-%                 t = tiledlayout(1,2,'TileSpacing','compact');
-%                 nonZero_idx = [num_per_path{1}] > 0;
-%                 num_per_path{1} = num_per_path{1}(nonZero_idx);
-%                 if ~isempty(num_per_path{1})
-%                     % Create pie charts
-%                     ax1 = nexttile;
-%                     pie1 = pie(ax1,num_per_path{1});
-%                     ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
-%                     title('Right HS')
-%                     % Create legend
-%                     lgd = legend(obj.pathway_list(nonZero_idx));
-%                     lgd.Layout.Tile = 'west';
-%                 end
-% 
-%                 ax2 = nexttile;
-%                 colormap(ax2,winter)
-%                 nonZero_idx = [num_per_path{2}] > 0;
-%                 num_per_path{2} = num_per_path{2}(nonZero_idx);
-%                 if ~isempty(num_per_path{2})
-%                     pie(ax2,num_per_path{2})
-%                     title('Left HS')
-%                     % Create legend
-%                     lgd2 = legend(obj.pathway_list(nonZero_idx));
-%                     lgd2.Layout.Tile = 'east';
-%                 end
+                figure
+                t = tiledlayout(1,2,'TileSpacing','compact');
+                nonZero_idx = [num_per_path{1}] > 0;
+                num_per_path{1} = num_per_path{1}(nonZero_idx);
+                if ~isempty(num_per_path{1})
+                    % Create pie charts
+                    ax1 = nexttile;
+                    pie1 = pie(ax1,num_per_path{1});
+                    ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
+                    title('Right HS')
+                    % Create legend
+                    lgd = legend(obj.pathway_list(nonZero_idx));
+                    lgd.Layout.Tile = 'west';
+                end
+
+                ax2 = nexttile;
+                colormap(ax2,winter)
+                nonZero_idx = [num_per_path{2}] > 0;
+                num_per_path{2} = num_per_path{2}(nonZero_idx);
+                if ~isempty(num_per_path{2})
+                    pie(ax2,num_per_path{2})
+                    title('Left HS')
+                    % Create legend
+                    lgd2 = legend(obj.pathway_list(nonZero_idx));
+                    lgd2.Layout.Tile = 'east';
+                end
             end
 
             allvals{1}=[]; % need to use a loop here - cat doesnt work in all cases with partly empty cells..

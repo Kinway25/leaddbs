@@ -74,7 +74,7 @@ save(cfile, '-struct', 'ftr');
 if obj.connectivity_type ~= 2
     return
 end
-
+return
 % now iterate over fiberActivation.._...mat and merge them
 % also adds 0 activation for those filtered out by Kuncel-VTA
 

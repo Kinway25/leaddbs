@@ -9,6 +9,12 @@ if nargin == 1
     maxEfieldthresh = 0.351; % Astrom et al. 2014, 2.5µm, 5V
 
     reestimatesteepness = 0;
+
+    minEfieldthresh = 0.0; % Astrom et al. 2014, 7.5µm, 1.5V
+    maxEfieldthresh = 0.275; % Astrom et al. 2014, 2.5µm, 5V
+
+    reestimatesteepness = 1;
+
 elseif nargin == 3
     minEfieldthresh = varargin{2};
     maxEfieldthresh = varargin{3};
