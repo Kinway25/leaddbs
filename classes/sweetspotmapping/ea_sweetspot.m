@@ -135,7 +135,21 @@ classdef ea_sweetspot < handle
             end
 
             if isfield(obj.M,'pseudoM')
-                vatlist = obj.M.ROI.list;
+                %vatlist = obj.M.ROI.list;
+                numPatient = length(obj.allpatients);
+                vatlist = cell(numPatient*2,2);
+                 for i = 1:numPatient
+                     vatlist{i,1} = obj.M.ROI.list{i,1};
+                     vatlist{i,2} = obj.M.ROI.list{i,2};
+                 end
+                 %for i = numPatient+1 : numPatient*2
+                 %    vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:53),'fl_efield_left_',num2str(i-numPatient),'.nii'];
+                 %    vatlist{i,2} = [obj.M.ROI.list{i-numPatient,2}(1:53),'fl_efield_right_',num2str(i-numPatient),'.nii'];
+                 %end
+                 for i = numPatient+1 : numPatient*2
+                     vatlist{i,1} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_left.nii'];
+                     vatlist{i,2} = [obj.M.ROI.list{i-numPatient,1}(1:end-20),'fl_vat_efield_right.nii'];
+                 end
             else
                 vatlist = ea_sweetspot_getvats(obj);
             end
@@ -252,6 +266,7 @@ classdef ea_sweetspot < handle
         end
 
         function [I, Ihat] = crossval(obj, cvp, Iperm)
+
             if isnumeric(cvp) % cvp is crossvalind
                 cvIndices = cvp;
                 cvID = unique(cvIndices);
