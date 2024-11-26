@@ -54,14 +54,17 @@ function ea_plot_prob_fiber_state(varargin)
         %mytract = streamtube(fibersnew(myfibs(fiber_i)),probability(myfibs(fiber_i)));
         %mytract = streamtube(fibersnew(myfibs(fiber_i)),probability(myfibs(fiber_i))*0.5);
         if probability(myfibs(fiber_i)) == 0
+            continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.05);
-            set(mytract,'FaceColor',[1,1,1],'FaceAlpha',0.25,'EdgeColor','none')
+            %set(mytract,'FaceColor',[1,1,1],'FaceAlpha',0.25,'EdgeColor','none')
+            set(mytract,'FaceColor',[0,0,0],'FaceAlpha',0.25,'EdgeColor','none')
         else
             mytract = streamtube(fibersnew(myfibs(fiber_i)),exp_norm_probability(myfibs(fiber_i))*0.3+0.1);
             %mytract = streamtube(fibersnew(myfibs(fiber_i)),probability(myfibs(fiber_i))*1.0);
             %set(mytract,'FaceColor',[probability(myfibs(fiber_i))*0.8+0.2,(1-probability(myfibs(fiber_i)))*0.33,0],'FaceAlpha',exp_norm_probability(myfibs(fiber_i)),'EdgeColor','none')
             %set(mytract,'FaceColor',[probability(myfibs(fiber_i))*0.75+0.25,(1-probability(myfibs(fiber_i)))*0.75,0],'FaceAlpha',exp_norm_probability(myfibs(fiber_i)),'EdgeColor','none')
-            set(mytract,'FaceColor',[1.0,(1-probability(myfibs(fiber_i))),0],'FaceAlpha',exp_norm_probability(myfibs(fiber_i)),'EdgeColor','none')
+            %set(mytract,'FaceColor',[0.825*probability(myfibs(fiber_i)),0.325*probability(myfibs(fiber_i)),1.0*probability(myfibs(fiber_i))],'FaceAlpha',exp_norm_probability(myfibs(fiber_i)),'EdgeColor','none')
+            set(mytract,'FaceColor',[0.825*probability(myfibs(fiber_i)),0.325*probability(myfibs(fiber_i)),1.0*probability(myfibs(fiber_i))],'FaceAlpha',1.0,'EdgeColor','none')
         end
     end
 

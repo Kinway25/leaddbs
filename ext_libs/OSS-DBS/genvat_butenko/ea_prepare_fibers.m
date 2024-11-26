@@ -154,6 +154,16 @@ else % Multi-Tract connectome
         % Filter fibers based on the spherical ROI
         fiberFiltered = ea_filterfiber_stim(conn, coords_mm_MNI, stimProtocol, 'kuncel', 2);
 
+        % if contains(tract, '_left.mat')
+        %     fiberFiltered{1,2}.fibers = conn.fibers;
+        %     fiberFiltered{1,2}.idx = conn.idx;
+        %     fiberFiltered{1,1} = {};
+        % else
+        %     fiberFiltered{1,1}.fibers = conn.fibers;
+        %     fiberFiltered{1,1}.idx = conn.idx;
+        %     fiberFiltered{1,2} = {};
+        % end
+
         % Filter fibers based on the minimal length
         fiberFiltered = ea_filterfiber_len(fiberFiltered, settings.axonLength(t));
 

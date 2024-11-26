@@ -1406,7 +1406,7 @@ classdef ea_disctract < handle
             end
 
             % print number of significant displayed fibers per pathway (atm only for binary metrics)
-            if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'VAT_Ttest_proj') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn') || isequal(ea_method2methodid(obj),'plainconn_proj'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
+            if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'efield_proj_peak') || isequal(ea_method2methodid(obj),'efield_peak') || isequal(ea_method2methodid(obj),'PAM_probA') || isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'VAT_Ttest_proj') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn') || isequal(ea_method2methodid(obj),'plainconn_proj'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
                 %disp("number of drawn fibers per pathway")
                 num_per_path = cell(1, 2); % with obj.map_list, rates can be computed
                 for side = 1:size(usedidx,2)
