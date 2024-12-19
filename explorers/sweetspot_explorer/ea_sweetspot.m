@@ -142,7 +142,7 @@ classdef ea_sweetspot < handle
             else
                 vatlist = ea_sweetspot_getvats(obj);
             end
-            [AllX,space] = ea_exportefieldmapping(vatlist,obj);
+            [AllX,space] = ea_exportefieldmapping_till(vatlist,obj);
 
             obj.results.efield = AllX;
             obj.results.space = space;
@@ -273,6 +273,18 @@ classdef ea_sweetspot < handle
                 patientsel = obj.customselection;
             end
 
+            patientsel_all = 1:size(obj.setselections{1,1},2);
+            patientsel_all = patientsel_all';
+            %[training_shell, test_all] = Kfold_for_shell(obj,patientsel,patientsel,obj.setselections{1,1});
+            %[training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
+            [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,true(1,size(obj.setselections{1,1},2)));
+            NumTestSets = 16;  % as many as patients
+            % redefine patientsel for the whole STN cohort
+            patientsel = patientsel_all;
+
+            %NumTestSets = cvp.NumTestSets;
+
+
             if ~exist('Iperm', 'var') || isempty(Iperm)
                 I = obj.responsevar(patientsel,:);
             else
@@ -281,15 +293,20 @@ classdef ea_sweetspot < handle
 
             % Ihat is the estimate of improvements (not scaled to real improvements)
             Ihat = nan(length(patientsel),2);
+            Ihat_train_global = nan(NumTestSets,length(patientsel),2);
 
-            for c=1:cvp.NumTestSets
-                if cvp.NumTestSets ~= 1
-                    fprintf(['\nIterating set: %0',num2str(numel(num2str(cvp.NumTestSets))),'d/%d\n'], c, cvp.NumTestSets);
+            for c=1:NumTestSets
+                if NumTestSets ~= 1
+                    fprintf(['\nIterating set: %0',num2str(numel(num2str(NumTestSets))),'d/%d\n'], c, NumTestSets);
                 end
 
                 if isobject(cvp)
-                    training = cvp.training(c);
-                    test = cvp.test(c);
+                    %training = cvp.training(c);
+                    %test = cvp.test(c);
+
+                    training = training_shell(:,c);
+                    test = test_all(:,c);
+
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -331,10 +348,13 @@ classdef ea_sweetspot < handle
                         switch obj.statlevel % also differentiate between methods in the prediction part.
                             case 'VTAs'
                                 efield = obj.results.efield{side}(patientsel(test),:)';
+                                efield_train = obj.results.efield{side}(patientsel(training),:)';
                                 efield(~isnan(efield)) = efield(~isnan(efield)) > obj.efieldthreshold;
+                                efield_train(~isnan(efield_train)) = efield_train(~isnan(efield_train)) > obj.efieldthreshold;
                                 switch lower(obj.basepredictionon)
                                     case 'mean of scores'
                                         Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*efield,1);
+                                        Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*efield_train,1);
                                     case 'sum of scores'
                                         Ihat(test,side) = ea_nansum(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*efield,1);
                                     case 'peak of scores'
@@ -352,6 +372,7 @@ classdef ea_sweetspot < handle
                                         Ihat(test,side) = atanh(ea_corr(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible),obj.results.efield{side}(patientsel(test),:)','bend'));
                                     case 'mean of scores'
                                         Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
+                                        Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(training),:)',1);
                                     case 'sum of scores'
                                         Ihat(test,side) = ea_nansum(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
                                     case 'peak of scores'
@@ -364,12 +385,69 @@ classdef ea_sweetspot < handle
                 end
             end
 
+            % check if binary variable and not permutation test
+            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
+                % average across sides. This might be wrong for capsular response.
+                Ihat_av_sides = ea_nanmean(Ihat,2);
+
+                if isobject(cvp)
+
+                    % fit logit in k-fold
+                    % this will create a lot of plots!
+                    if cvp.NumTestSets ~= 0
+                        
+                        Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (cvp.NumTestSets, N, sides)
+                        AUC = zeros(cvp.NumTestSets,1);
+                        Ihat_prediction = false(size(Ihat_av_sides,1),1);
+                        for c=1:cvp.NumTestSets
+                            if isobject(cvp)
+                                %training = cvp.training(c);
+                                %test = cvp.test(c);
+                                training = training_shell(:,c);
+                                test = test_all(:,c);
+                            elseif isstruct(cvp)
+                                training = cvp.training{c};
+                                test = cvp.test{c};
+                            end
+                            % only choose real test patients
+                            patientsel_test = patientsel(test);
+
+                            Ihat_prediction(test) = ea_logit_regression_fold(Ihat_train_global_av_sides(c,training) ,Ihat_av_sides, I, training, test);
+                        end
+
+                        % get the confussion matrix (this can be done on the test set now)
+                        figure
+                        cm = confusionchart(logical(I), Ihat_prediction);
+                        set(gcf,'color','w');
+                        
+                        tp = sum((Ihat_prediction == 1) & (I == 1));
+                        fp = sum((Ihat_prediction == 1) & (I == 0));
+                        tn = sum((Ihat_prediction == 0) & (I == 0));
+                        fn = sum((Ihat_prediction == 0) & (I == 1));
+                        
+                        sensitivity = tp/(tp + fn);  % TPR
+                        specificity = tn/(tn + fp);  % TNR
+                        
+                        cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity)];
+
+
+                    % Do in-sample even for LOO: we test the robustness of
+                    % Ihat, not logit model for now
+                    else
+                        AUC = ea_logit_regression(0 ,Ihat_av_sides, I, 1:size(I,1), 1:size(I,1));
+                    end
+                elseif isstruct(cvp)
+                    Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
+                    AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
+                end
+            end
+
             % restore original view in case of live drawing
             if obj.cvlivevisualize
                 obj.draw;
             end
 
-            if cvp.NumTestSets == 1
+            if NumTestSets == 1
                 Ihat = Ihat(test,:);
                 I = I(test);
             end

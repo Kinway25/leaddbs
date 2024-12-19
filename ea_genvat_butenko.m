@@ -26,6 +26,8 @@ time = datetime('now', 'TimeZone', 'local');
 timezone = time.TimeZone;
 setenv('TZ', timezone);
 
+%options.optimizer = 1;
+
 % import settings from Lead-DBS GUI
 [settings,S] = ea_prepare_ossdbs(options,S);
 

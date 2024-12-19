@@ -1,4 +1,4 @@
-function ea_synthseg(input, output)
+J1function ea_synthseg(input, output)
 % Wrapper to run SynthSeg
 arguments
     input       % path to the nifti to segment

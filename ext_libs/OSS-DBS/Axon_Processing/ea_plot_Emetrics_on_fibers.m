@@ -58,8 +58,8 @@ function ea_plot_Emetrics_on_fibers(varargin)
     for fiber_i = 1:size(myfibs,1)
         %mytract = streamtube(fibersnew(myfibs(fiber_i)),probability(myfibs(fiber_i)));
         %mytract = streamtube(fibersnew(myfibs(fiber_i)),probability(myfibs(fiber_i))*0.5);
-        if E_metrics.magn_peak(myfibs(fiber_i)) == 0
-            %continue
+        if E_metrics.magn_peak(myfibs(fiber_i)) < 0.05
+            continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.05);
             set(mytract,'FaceColor',[1,1,1],'FaceAlpha',0.25,'EdgeColor','none')
         else

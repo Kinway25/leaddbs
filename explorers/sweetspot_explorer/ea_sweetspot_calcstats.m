@@ -287,8 +287,11 @@ for group=groups
                     case 'Correlations'
 
                         thisvals=gval{side}(gpatsel,:);
-                        nanidx = isnan(ea_nansum(thisvals));
-                        thisvals = thisvals(:, ~nanidx);
+                        thatvals = nan(size(thisvals));
+                        thatvals(thisvals>=350.0) = thisvals(thisvals>=350.0);
+                        Nmap=ea_nansum(~isnan(thatvals));
+                        nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
+                        thisvals=thisvals(:,~nanidx);
 
                         if obj.showsignificantonly
                             [R,p]=ea_corr(thisvals,I(gpatsel,side),obj.corrtype);
@@ -301,35 +304,46 @@ for group=groups
                         vals{group,side}(~nanidx)=R;
                     case 'Reverse T-Tests (Binary Var)'
 
-                        nonempty=ea_nansum(gval{side}(gpatsel,:),1)>0;
                         thisvals=gval{side}(gpatsel,:);
-                        Nmap=ea_nansum(~isnan(thisvals));
-                        nonempty(Nmap<round(size(thisvals,1)*(obj.coverthreshold/100)))=0; % apply N-threshold
-                        invals=gval{side}(gpatsel,nonempty)';
-                    if ~isempty(invals)
-                        ImpBinary=double((I(gpatsel,side))>0); % make sure variable is actually binary
-                        % restore nans
-                        ImpBinary(isnan(I(gpatsel,side)))=nan;
-                        upSet=invals(:,ImpBinary==1)';
-                        downSet=invals(:,ImpBinary==0)';
+                        thatvals = nan(size(thisvals));
+                        thatvals(thisvals>=200.0) = thisvals(thisvals>=200.0);
+                        Nmap=ea_nansum(~isnan(thatvals));
+                        nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
+                        thisvals=thisvals(:,~nanidx);
 
-                        if obj.showsignificantonly
-                            [~,ps,~,stats]=ttest2(upSet,downSet); % Run two-sample t-test across connected / unconnected values
-                            outvals=stats.tstat';
-                            outps=ps;
-                            outvals=ea_corrsignan(outvals,outps,obj);
+                        thisvals = ea_SigmoidFromEfield(thisvals);
 
-                        else % no need to calc p-val here
-                            [~,~,~,stats]=ttest2(upSet,downSet); % Run two-sample t-test across connected / unconnected values
-                            outvals=stats.tstat';
+                        nonempty=sum(thisvals(:,:),1)>0; % number of connected tracts
+                        invals=thisvals(:,nonempty);
+    
+                        if ~isempty(invals)
+                        
+                            Impr = I(gpatsel,side);
+    
+                            if any(isnan(I(gpatsel,side)))
+                                ea_warndlg("NaNs in scores detected, removing...")
+                                %return
+                                % remove the whole row
+                                nan_scores = isnan(I(gpatsel,side));
+                                
+                                Impr(nan_scores,:) = [];
+                                invals(nan_scores,:) = [];
+                            end
+    
+                            ImpBinary=logical((Impr)>0); % make sure variable is actually binary
+                            % restore nans
+    
+                            [outvals,CI95_up,CI95_low,outps] = ea_discfibers_odds_ratios(invals,ImpBinary);
+                 
+                            %
+                            if obj.showsignificantonly % only calculated if testing for significance.
+                                %pvals{group,side}(nonempty)=outps;
+                                outvals=ea_corrsignan(outvals,outps,obj);
+                            end 
+                            %vals{group,side}(nonempty)=outvals;
+                            vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
+                            vals{group,side}(~nanidx)=outvals;
                         end
-                        vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
-
-                        vals{group,side}(nonempty)=outvals;
-%                         if exist('outps','var') % only calculated if testing for significance.
-%                             pvals{group,side}(nonempty)=outps;
-%                         end
-                    end 
                 end
         end
     end
