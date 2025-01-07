@@ -83,7 +83,7 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
 
     % if no fibers were selected for the permutation iteration, 
     % assign dummies that will have r = 0
-    if isempty(vals{1}) && isempty(vals{2}) && exist('Iperm', 'var') && ~isempty(Iperm)
+    if isempty(vals{1}) && exist('Iperm', 'var') && ~isempty(Iperm)
         for voter=1:size(vals,1)
             for side=1:size(vals,2)
                 actualimprovs{voter,side} = 42;

@@ -276,7 +276,7 @@ classdef ea_disctract < handle
                     else
                         vatlist = ea_discfibers_getvats(obj);
                     end
-                    ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
+                    %ea_discfibers_roi_collect(obj); % integrate ROI into .fibfilt file
 
                     [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell,  connFiberInd, totalFibers] = ea_discfibers_calcvals(vatlist, cfile, obj.calcthreshold);
                     obj.results.(ea_conn2connid(obj.connectome)).('VAT_Ttest').fibsval = fibsvalBin;
@@ -506,8 +506,8 @@ classdef ea_disctract < handle
                 cvIndices = cvp;
                 cvID = unique(cvIndices);
                 cvp = struct;
-                cvp.NumTestSets = length(cvID);
-                for i=1:cvp.NumTestSets
+                NumTestSets = length(cvID);
+                for i=1:NumTestSets
                     cvp.training{i} = cvIndices~=cvID(i);
                     cvp.test{i} = cvIndices==cvID(i);
                 end
@@ -519,6 +519,21 @@ classdef ea_disctract < handle
             else
                 patientsel = obj.customselection;
             end
+
+            % threshold_STN_bin = obj.setselections{1,1}(1,obj.patientselection);
+            % patientsel_all = 1:size(obj.setselections{1,1},2);
+            % patientsel_all = patientsel_all';
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
+            % patientsel = patientsel_all;
+
+            % patientsel_all = patientsel;
+            % [training_all, test_all] = LOPO(obj,patientsel_all);
+            
+            % NumTestSets = 18;  % as many as patients
+            % % redefine patientsel for the whole STN cohort
+            % patientsel = patientsel_all;
+
+            NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -543,10 +558,10 @@ classdef ea_disctract < handle
             % Ihat is the estimate of improvements (not scaled to real improvements)
             if strcmp(obj.multitractmode,'Single Tract Analysis')
                 Ihat = nan(length(patientsel),2);
-                Ihat_train_global = nan(cvp.NumTestSets,length(patientsel),2);
+                Ihat_train_global = nan(NumTestSets,length(patientsel),2);
             else
                 Ihat = nan(length(patientsel),2,length(obj.subscore.vars));
-                Ihat_train_global = nan(cvp.NumTestSets,length(patientsel),2,length(obj.subscore.vars));
+                Ihat_train_global = nan(NumTestSets,length(patientsel),2,length(obj.subscore.vars));
             end
 
             if obj.useExternalModel == true && ~strcmp(obj.ExternalModelFile, 'None')
@@ -566,10 +581,10 @@ classdef ea_disctract < handle
 
             % for nested LOO, store some statistics
             if obj.nestedLOO
-                Abs_pred_error = zeros(cvp.NumTestSets, 1);
+                Abs_pred_error = zeros(NumTestSets, 1);
                 Predicted_scores = zeros(length(patientsel), 1);
-                Slope = zeros(cvp.NumTestSets, 1);
-                Intercept = zeros(cvp.NumTestSets, 1);
+                Slope = zeros(NumTestSets, 1);
+                Intercept = zeros(NumTestSets, 1);
 
             end
 
@@ -578,16 +593,23 @@ classdef ea_disctract < handle
                 obj.adj_scaler = 0.0;
             end
             obj.adj_scaler = 0.0;
-            for c=1:cvp.NumTestSets
-                if cvp.NumTestSets ~= 1
+            for c=1:NumTestSets
+                if NumTestSets ~= 1
                     if ~silent
-                        fprintf(['\nIterating set: %0',num2str(numel(num2str(cvp.NumTestSets))),'d/%d\n'], c, cvp.NumTestSets);
+                        fprintf(['\nIterating set: %0',num2str(numel(num2str(NumTestSets))),'d/%d\n'], c, NumTestSets);
                     end
                 end
 
                 if isobject(cvp)
                     training = cvp.training(c);
                     test = cvp.test(c);
+
+                    %training = training_all(:,c);
+                    %test = test_all(:,c);
+
+                    %training = training_shell(:,c);
+                    %test = test_all(:,c);
+
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -598,10 +620,10 @@ classdef ea_disctract < handle
                     % use all patients, but outer loop left-out is always 0
                     if strcmp(obj.multitractmode,'Single Tract Analysis')
                         Ihat_inner = nan(length(patientsel),2);
-                        Ihat_train_global_inner = nan(cvp.NumTestSets,length(patientsel),2);
+                        Ihat_train_global_inner = nan(NumTestSets,length(patientsel),2);
                     else
                         Ihat_inner = nan(length(patientsel),2,length(obj.subscore.vars));
-                        Ihat_train_global_inner = nan(cvp.NumTestSets,length(patientsel),2,length(obj.subscore.vars));
+                        Ihat_train_global_inner = nan(NumTestSets,length(patientsel),2,length(obj.subscore.vars));
                     end
                     for test_i = 1:length(training)
                         training_inner = training;
@@ -651,32 +673,71 @@ classdef ea_disctract < handle
             end
 
             % check if binary variable and not permutation test
-            if ~iscell(Improvement)
-                if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1
-                    % average across sides. This might be wrong for capsular response.
-                    Ihat_av_sides = ea_nanmean(Ihat,2);
-    
-                    if isobject(cvp)
-                        % In-sample
-                        AUC = ea_logit_regression(0 ,Ihat_av_sides, Improvement, 1:size(Improvement,1), 1:size(Improvement,1));
-                    elseif isstruct(cvp)
-                        % actual training and test
-                        Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
-                        AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, Improvement, training, test);
+            I = Improvement;
+            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
+                % average across sides. This might be wrong for capsular response.
+                Ihat_av_sides = ea_nanmean(Ihat,2);
+
+                if isobject(cvp)
+
+                    % fit logit in k-fold
+                    % this will create a lot of plots!
+                    if cvp.NumTestSets ~= 0
+                        
+                        Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (cvp.NumTestSets, N, sides)
+                        AUC = zeros(NumTestSets,1);
+                        Ihat_prediction = false(size(Ihat_av_sides,1),1);
+                        for c=1:NumTestSets
+                            if isobject(cvp)
+                                %training = cvp.training(c);
+                                %test = cvp.test(c);
+                                training = training_shell(:,c);
+                                test = test_all(:,c);
+                            elseif isstruct(cvp)
+                                training = cvp.training{c};
+                                test = cvp.test{c};
+                            end
+                            % only choose real test patients
+                            patientsel_test = patientsel(test);
+
+                            Ihat_prediction(test) = ea_logit_regression_fold(Ihat_train_global_av_sides(c,training) ,Ihat_av_sides, I, training, test);
+                        end
+
+                        % get the confussion matrix (this can be done on the test set now)
+                        figure
+                        cm = confusionchart(logical(I), Ihat_prediction);
+                        set(gcf,'color','w');
+                        
+                        tp = sum((Ihat_prediction == 1) & (I == 1));
+                        fp = sum((Ihat_prediction == 1) & (I == 0));
+                        tn = sum((Ihat_prediction == 0) & (I == 0));
+                        fn = sum((Ihat_prediction == 0) & (I == 1));
+                        
+                        sensitivity = tp/(tp + fn);  % TPR
+                        specificity = tn/(tn + fp);  % TNR
+                        
+                        cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity)];
+
+                    % Do in-sample even for LOO: we test the robustness of
+                    % Ihat, not logit model for now
+                    else
+                        AUC = ea_logit_regression(0 ,Ihat_av_sides, I, 1:size(I,1), 1:size(I,1));
                     end
-    
+                elseif isstruct(cvp)
+                    Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
+                    AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
                 end
-            end 
+            end
 
             if ~silent
                 % plot patient score correlation matrix over folds
                 if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
-                    if cvp.NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
+                    if NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
 
                         % put training and test scores together
-                        Ihat_combined = cell(1,cvp.NumTestSets);
+                        Ihat_combined = cell(1,NumTestSets);
                         %Ihat_combined = Ihat_train_global;
-                        for c=1:cvp.NumTestSets
+                        for c=1:NumTestSets
                             if isobject(cvp)
                                 training = cvp.training(c);
                                 test = cvp.test(c);
@@ -717,9 +778,9 @@ classdef ea_disctract < handle
                 disp(LM_values_intercept)
 
                 % visualize lms and CIs for 5-fold or less
-                if cvp.NumTestSets < 6
+                if NumTestSets < 6
                     groups_nested = zeros(length(Predicted_scores),1);
-                    for group_idx = 1:cvp.NumTestSets
+                    for group_idx = 1:NumTestSets
                         groups_nested(cvp.test(group_idx)) = group_idx;
                     end
                     side = 1;
@@ -744,7 +805,7 @@ classdef ea_disctract < handle
                         end
                 end
                 numVoters = size(val_struct{c}.vals,1);
-                 for c=1:cvp.NumTestSets
+                 for c=1:NumTestSets
                     if isobject(cvp)
                         training = cvp.training(c);
                         test = cvp.test(c);
@@ -824,7 +885,7 @@ classdef ea_disctract < handle
 
 
                 % quantify the prediction accuracy (if Train-Test)
-                if cvp.NumTestSets == 1 && voter == 1 && size(obj.responsevar,2) == 1 && (~exist('Iperm', 'var') || isempty(Iperm))
+                if NumTestSets == 1 && voter == 1 && size(obj.responsevar,2) == 1 && (~exist('Iperm', 'var') || isempty(Iperm))
                     side = 1;
                     SS_tot = var(useI(test)) * (length(useI(test)) - 1); % just a trick to use one line
                     SS_res = sum((Ihat_voters_prediction(test,side,1) - useI(test)).^2);
@@ -935,7 +996,7 @@ classdef ea_disctract < handle
                     %Ihat=squeeze(Ihat_voters);
             end
             if ~iscell(Ihat)
-                if cvp.NumTestSets == 1
+                if NumTestSets == 1
                     Ihat = Ihat(test,:);
                     Improvement = Improvement(test);
                 end
