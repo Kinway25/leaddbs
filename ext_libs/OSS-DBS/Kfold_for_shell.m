@@ -2,8 +2,6 @@ function [training_sets,test_sets] = Kfold_for_shell(obj,patientsel,patientsel_t
 
 load('/home/forel/Documents/data/JB_project/JK_SW_table_18.mat')
 PT_names = string(unique(data_flat_SW.subject));
-%load('/home/forel/Documents/data/JB_project/JB_SW_table.mat')
-%PT_names = unique(data_flat_JB.pt_label);
 
 %N_PTs = length(PT_names);
 my_indices = randperm(length(PT_names));

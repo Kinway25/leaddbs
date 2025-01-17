@@ -1,9 +1,7 @@
-function [training_sets,test_sets] = Kfold_for_shell(obj,patientsel,patientsel_train,threshold_STN_bin)
+function [training_sets,test_sets] = LOPO(obj,patientsel)
 
-load('/home/forel/Documents/data/JB_project/JK_SW_table_18.mat')
-PT_names = string(unique(data_flat_SW.subject));
-%load('/home/forel/Documents/data/JB_project/JB_SW_table.mat')
-%PT_names = unique(data_flat_JB.pt_label);
+load('/home/forel/Documents/data/JB_project/JB_SW_table_18.mat')
+PT_names = string(unique(data_flat_SW.pt_label));
 
 %N_PTs = length(PT_names);
 my_indices = randperm(length(PT_names));
@@ -59,10 +57,8 @@ for fold_i = 1:N_folds
         temp2=strsplit(obj.M.patient.list{patientsel(vta_j)},'-');
         pt_ID2 = ['0',temp2{2}(1:2)]; 
 
-        if ismember(vta_j,patientsel_train) && ~any(strcmp(fold_out{1,fold_i},pt_ID2))
-            if threshold_STN_bin(1,vta_j) == 1
-                training_sets(vta_j,fold_i) = 1;
-            end
+        if ~any(strcmp(fold_out{1,fold_i},pt_ID2))
+            training_sets(vta_j,fold_i) = 1;
             patientsel_full = [patientsel_full, vta_j];
         elseif any(strcmp(fold_out{1,fold_i},pt_ID2))
             % if yes, select for test

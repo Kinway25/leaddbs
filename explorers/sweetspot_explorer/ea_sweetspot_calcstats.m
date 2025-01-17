@@ -312,6 +312,7 @@ for group=groups
                         thisvals=thisvals(:,~nanidx);
 
                         thisvals = ea_SigmoidFromEfield(thisvals);
+                        thisvals(isnan(thisvals)) = 0.0;
 
                         nonempty=sum(thisvals(:,:),1)>0; % number of connected tracts
                         invals=thisvals(:,nonempty);

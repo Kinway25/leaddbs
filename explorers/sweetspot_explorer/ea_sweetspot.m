@@ -273,16 +273,18 @@ classdef ea_sweetspot < handle
                 patientsel = obj.customselection;
             end
 
+            % threshold_STN_bin = obj.setselections{1,1}(1,obj.patientselection);
             % patientsel_all = 1:size(obj.setselections{1,1},2);
             % patientsel_all = patientsel_all';
-            % %[training_shell, test_all] = Kfold_for_shell(obj,patientsel,patientsel,obj.setselections{1,1});
-            % %[training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
-            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,true(1,size(obj.setselections{1,1},2)));
-            % NumTestSets = 16;  % as many as patients
-            % % redefine patientsel for the whole STN cohort
-            % patientsel = patientsel_all;
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
+            % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            NumTestSets = cvp.NumTestSets;
+            patientsel_all = patientsel;
+            [training_all, test_all] = LOPO(obj,patientsel_all);
+
+            NumTestSets = 18;  % as many as patients
+
+            %NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -301,8 +303,11 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    training = cvp.training(c);
-                    test = cvp.test(c);
+                    %training = cvp.training(c);
+                    %test = cvp.test(c);
+
+                    training = training_all(:,c);
+                    test = test_all(:,c);
 
                     %training = training_shell(:,c);
                     %test = test_all(:,c);
@@ -394,16 +399,18 @@ classdef ea_sweetspot < handle
 
                     % fit logit in k-fold
                     % this will create a lot of plots!
-                    if cvp.NumTestSets ~= 0
+                    if NumTestSets ~= 0
                         
                         Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (cvp.NumTestSets, N, sides)
                         AUC = zeros(cvp.NumTestSets,1);
                         Ihat_prediction = false(size(Ihat_av_sides,1),1);
-                        for c=1:cvp.NumTestSets
+                        for c=1:NumTestSets
                             if isobject(cvp)
                                 %training = cvp.training(c);
                                 %test = cvp.test(c);
-                                training = training_shell(:,c);
+                                %training = training_shell(:,c);
+                                %test = test_all(:,c);
+                                training = training_all(:,c);
                                 test = test_all(:,c);
                             elseif isstruct(cvp)
                                 training = cvp.training{c};
