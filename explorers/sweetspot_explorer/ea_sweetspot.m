@@ -273,18 +273,18 @@ classdef ea_sweetspot < handle
                 patientsel = obj.customselection;
             end
 
-            threshold_STN_bin = obj.setselections{1,1}(1,obj.patientselection);
-            patientsel_all = 1:size(obj.setselections{1,1},2);
-            patientsel_all = patientsel_all';
-            [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
-            patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
+            % threshold_STN_bin = obj.setselections{1,1}(1,obj.patientselection);
+            % patientsel_all = 1:size(obj.setselections{1,1},2);
+            % patientsel_all = patientsel_all';
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
+            % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            %patientsel_all = patientsel;
-            %[training_all, test_all] = LOPO(obj,patientsel_all);
+            % patientsel_all = patientsel;
+            % [training_all, test_all] = LOPO(obj,patientsel_all);
+            % 
+            % NumTestSets = 18;  % as many as patients
 
-            NumTestSets = 18;  % as many as patients
-
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -303,14 +303,14 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    %training = cvp.training(c);
-                    %test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
                     %training = training_all(:,c);
                     %test = test_all(:,c);
 
-                    training = training_shell(:,c);
-                    test = test_all(:,c);
+                    %training = training_shell(:,c);
+                    %test = test_all(:,c);
 
                 elseif isstruct(cvp)
                     training = cvp.training{c};
@@ -408,10 +408,10 @@ classdef ea_sweetspot < handle
                             if isobject(cvp)
                                 %training = cvp.training(c);
                                 %test = cvp.test(c);
-                                training = training_shell(:,c);
-                                test = test_all(:,c);
-                                %training = training_all(:,c);
+                                %training = training_shell(:,c);
                                 %test = test_all(:,c);
+                                training = training_all(:,c);
+                                test = test_all(:,c);
                             elseif isstruct(cvp)
                                 training = cvp.training{c};
                                 test = cvp.test{c};
