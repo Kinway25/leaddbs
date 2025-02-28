@@ -306,7 +306,7 @@ for group=groups
 
                         thisvals=gval{side}(gpatsel,:);
                         thatvals = nan(size(thisvals));
-                        thatvals(thisvals>=200.0) = thisvals(thisvals>=200.0);
+                        thatvals(thisvals>=500.0) = thisvals(thisvals>=500.0);
                         Nmap=ea_nansum(~isnan(thatvals));
                         nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
                         thisvals=thisvals(:,~nanidx);
