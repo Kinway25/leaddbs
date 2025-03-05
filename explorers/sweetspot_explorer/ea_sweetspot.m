@@ -279,12 +279,12 @@ classdef ea_sweetspot < handle
             % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            % patientsel_all = patientsel;
-            % [training_all, test_all] = LOPO(obj,patientsel_all);
-            % 
-            % NumTestSets = 18;  % as many as patients
+            patientsel_all = patientsel;
+            [training_all, test_all] = LOPO(obj,patientsel_all);
 
-            NumTestSets = cvp.NumTestSets;
+            NumTestSets = 18;  % as many as patients
+
+            %NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -303,11 +303,11 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    training = cvp.training(c);
-                    test = cvp.test(c);
+                    %training = cvp.training(c);
+                    %test = cvp.test(c);
 
-                    %training = training_all(:,c);
-                    %test = test_all(:,c);
+                    training = training_all(:,c);
+                    test = test_all(:,c);
 
                     %training = training_shell(:,c);
                     %test = test_all(:,c);
@@ -376,8 +376,11 @@ classdef ea_sweetspot < handle
                                    case 'profile of scores: bend'
                                         Ihat(test,side) = atanh(ea_corr(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible),obj.results.efield{side}(patientsel(test),:)','bend'));
                                     case 'mean of scores'
-                                        Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
-                                        Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(training),:)',1);
+                                        prob_vals = ea_SigmoidFromEfield(obj.results.efield{side}(:,:));
+                                        Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*prob_vals(patientsel(test),:)',1);
+                                        Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*prob_vals(patientsel(training),:)',1);
+                                        %Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
+                                        %Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(training),:)',1);
                                     case 'sum of scores'
                                         Ihat(test,side) = ea_nansum(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
                                     case 'peak of scores'
