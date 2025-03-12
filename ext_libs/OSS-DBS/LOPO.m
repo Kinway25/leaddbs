@@ -1,7 +1,10 @@
 function [training_sets,test_sets] = LOPO(obj,patientsel)
 
-load('/home/forel/Documents/data/JB_project/JB_SW_table_18.mat')
-PT_names = string(unique(data_flat_SW.pt_label));
+%load('/home/forel/Documents/data/JB_project/JB_SW_table_18.mat')
+%PT_names = string(unique(data_flat_SW.pt_label));
+
+load('/home/forel/Documents/data/JB_project/JK_SW_table_18.mat')
+PT_names = string(unique(data_flat_SW.subject));
 
 %N_PTs = length(PT_names);
 my_indices = randperm(length(PT_names));

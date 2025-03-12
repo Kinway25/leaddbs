@@ -279,12 +279,12 @@ classdef ea_sweetspot < handle
             % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            patientsel_all = patientsel;
-            [training_all, test_all] = LOPO(obj,patientsel_all);
+            %patientsel_all = patientsel;
+            %[training_all, test_all] = LOPO(obj,patientsel_all);
 
-            NumTestSets = 18;  % as many as patients
+            %NumTestSets = 18;  % as many as patients
 
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -297,17 +297,22 @@ classdef ea_sweetspot < handle
             Ihat = nan(length(patientsel),2);
             Ihat_train_global = nan(NumTestSets,length(patientsel),2);
 
+            % Ihat_separate = cell(36,1);
+            % Imp_separate = cell(36,1);
+            % pts_numeric = [];
+            % gl_counter = 1;
+            % load('/home/forel/Documents/data/JB_project/JB_SW_table_18.mat')
             for c=1:NumTestSets
                 if NumTestSets ~= 1
                     fprintf(['\nIterating set: %0',num2str(numel(num2str(NumTestSets))),'d/%d\n'], c, NumTestSets);
                 end
 
                 if isobject(cvp)
-                    %training = cvp.training(c);
-                    %test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    %training = training_all(:,c);
+                    %test = test_all(:,c);
 
                     %training = training_shell(:,c);
                     %test = test_all(:,c);
@@ -381,6 +386,21 @@ classdef ea_sweetspot < handle
                                         Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*prob_vals(patientsel(training),:)',1);
                                         %Ihat(test,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
                                         %Ihat_train_global(c,training,side) = ea_nanmean(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(training),:)',1);
+                                        
+                                        % % sort into sides
+                                        % pt_records = data_flat_SW(test,:);
+                                        % pts_numeric = [pts_numeric; str2num(pt_records.pt_label{1}); str2num(pt_records.pt_label{1})];
+                                        % pt_records.('hemi') = string(pt_records.('hemi'));
+                                        % pt_Ihat = Ihat(test,side);
+                                        % pt_Imp = I(test,side);
+                                        % % if isempty(find(pt_records.hemi == 'R')) || isempty(find(pt_records.hemi == 'L'))
+                                        % %     disp(pt_records.pt_label(1))
+                                        % % end
+                                        % Ihat_separate{gl_counter,1} = pt_Ihat(pt_records.hemi == 'R');
+                                        % Ihat_separate{gl_counter+1,1} = pt_Ihat(pt_records.hemi == 'L');
+                                        % Imp_separate{gl_counter,1} = pt_Imp(pt_records.hemi == 'R');
+                                        % Imp_separate{gl_counter+1,1} = pt_Imp(pt_records.hemi == 'L');
+                                        % gl_counter = gl_counter + 2;
                                     case 'sum of scores'
                                         Ihat(test,side) = ea_nansum(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
                                     case 'peak of scores'
@@ -394,7 +414,7 @@ classdef ea_sweetspot < handle
             end
 
             % check if binary variable and not permutation test
-            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
+           if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
                 % average across sides. This might be wrong for capsular response.
                 Ihat_av_sides = ea_nanmean(Ihat,2);
 
