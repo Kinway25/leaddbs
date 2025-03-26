@@ -11,6 +11,21 @@ arguments
     maxSegmentedCurrent
 end
 
+%% env. definition
+% Check OSS-DBS installation, set env
+env = ea_conda_env('OSS-DBSv2');
+ea_checkOSSDBSInstallv2(env);
+
+% Set python path
+binPath = getenv('PATH');
+if isunix
+    pythonPath = [env.path, filesep, 'bin'];
+    setenv('PATH', [pythonPath, ':', binPath]);
+else
+    pythonPath = [env.path,';',env.path,filesep,'Scripts'];
+    setenv('PATH', [pythonPath, ';', binPath]);
+end
+
 %% First we generate training and test datasets (as StimSet) based on the electrode model and provided current limits
 
 % set S to max values
