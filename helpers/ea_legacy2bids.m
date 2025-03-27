@@ -1480,7 +1480,8 @@ function [modalities, anchorModality] = checkModalities(coregAnatFolder)
 
     if sum(contains(modalities, anchorModality)) == 1
         % Only one anchor modality image exists
-        anchorModality = modalities{1};
+        idx = contains(modalities, anchorModality);
+        anchorModality = modalities{idx};
         modalities(contains(modalities, anchorModality)) = [];
     elseif sum(contains(modalities, anchorModality)) > 1
         % Multiple anchor modality images exist, remove the first
