@@ -15,14 +15,16 @@ classdef (Abstract) ea_conda
             else
                 % Set installation path
                 path = fullfile(ea_prefsdir, 'miniforge');
-                answer = questdlg(sprintf('Confirm Conda installation folder:\n%s', path), '', 'Yes', 'Custom', 'Yes');
-                if strcmp(answer, 'Custom')
-                    custompath = uigetdir(path, 'Specify Conda installation folder');
-                    if ischar(custompath)
-                        if ~endsWith(custompath, {'conda', 'condaforge', 'miniforge', 'mambaforge'}, 'IgnoreCase', true)
-                            path = fullfile(custompath, 'miniforge');
-                        else
-                            path = custompath;
+                if feature('ShowFigureWindows')
+                    answer = questdlg(sprintf('Confirm Conda installation folder:\n%s', path), '', 'Yes', 'Custom', 'Yes');
+                    if strcmp(answer, 'Custom')
+                        custompath = uigetdir(path, 'Specify Conda installation folder');
+                        if ischar(custompath)
+                            if ~endsWith(custompath, {'conda', 'condaforge', 'miniforge', 'mambaforge'}, 'IgnoreCase', true)
+                                path = fullfile(custompath, 'miniforge');
+                            else
+                                path = custompath;
+                            end
                         end
                     end
                 end
