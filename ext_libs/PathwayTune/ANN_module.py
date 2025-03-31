@@ -4,6 +4,7 @@
 '''
 
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 import numpy as np
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'   # to avoid any CUDA issues
@@ -11,8 +12,8 @@ import sys
 import json
 import copy
 
-import seaborn as sns
-sns.set()
+#import seaborn as sns
+#sns.set()
 
 #from sklearn.model_selection import train_test_split
 import tensorflow as tf
@@ -32,6 +33,34 @@ min_activ_threshold = 0.05   # if less than 5% of fibers in the pathway were act
 min_axon_number = 10         # minimal number of axons in the pathway (binary outcomes require different architecture)
 
 SIDE_SUFFIX = ['_rh','_lh']
+
+
+def matplotlib_kdeplot(data, ax=None, bw_method=None, **kwargs):
+    """
+    Replicates seaborn's kdeplot functionality using matplotlib and scipy.stats.gaussian_kde.
+
+    Parameters:
+    - data: 1D array-like data.
+    - ax: matplotlib Axes object, if None, a new figure and axes will be created.
+    - bw_method: The method used to calculate the estimator bandwidth. Can be 'scott', 'silverman', or a scalar.
+    - **kwargs: Additional keyword arguments passed to matplotlib's plot function.
+
+    Returns:
+    - matplotlib Axes object.
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    kde = gaussian_kde(data, bw_method=bw_method)
+    x_vals = np.linspace(min(data), max(data), 1000)  # Adjust range and resolution as needed
+    y_vals = kde(x_vals)
+
+    ax.plot(x_vals, y_vals, **kwargs)
+
+    return ax
+
+
 def train_test_ANN(stim_dir,res_folder, TrainTest_currents_file, trainSize, Err_threshold, SE_err_threshold, side, pathway, check_trivial, VAT_recruit = False):
 
     import os
@@ -190,44 +219,46 @@ def train_test_ANN(stim_dir,res_folder, TrainTest_currents_file, trainSize, Err_
     pathways_max_errors = {}  # also store
     for i in range(len(pathway_filtered)):
         pathways_max_errors[pathway_filtered[i]] = np.max(abs(error_ANN[:, i]))
+        inx_max_error = np.argmax(abs(error_ANN[:,i]))
+        pathways_max_errors['stim_protocol'] = list(X_test[inx_max_error,:])
         if np.max(abs(error_ANN[:, i])) > 0.05:
-            sns.kdeplot(error_ANN[:,i], bw_adjust=0.5, label=pathway_filtered[i])
+           matplotlib_kdeplot(error_ANN[:,i], label=pathway_filtered[i])
 
-    with open(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],'ANN_abs_errors.json'), 'w') as save_as_dict:
+    with open(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],pathway_filtered[i]+'_ANN_abs_errors.json'), 'w') as save_as_dict:
         json.dump(pathways_max_errors, save_as_dict)
 
     plt.legend()
     plt.title('Abs errors for ANN on Test')
     plt.xlim([-0.25,0.25])
-    plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],'ANN_abs_errors_on_Test' + SIDE_SUFFIX[side] + '.png'), format='png',
+    plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],pathway_filtered[i]+'_ANN_abs_errors_on_Test' + SIDE_SUFFIX[side] + '.png'), format='png',
                 dpi=1000)
 
+    check_trivial = False
     if check_trivial == True:
         plt.figure()
         for i in range(len(pathway_filtered)):
-
             if np.max(abs(error_ANN_bi[:,i])) > 0.05:
-                sns.kdeplot(error_ANN_bi[:,i], bw_adjust=0.5, label=pathway_filtered[i])
+                matplotlib_kdeplot(error_ANN_bi[:,i], label=pathway_filtered[i])
+
 
         plt.legend()
         plt.title('Abs errors for ANN on Bipolar')
         #plt.xlim([-0.15,0.15])
-        plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],'ANN_abs_errors_on_Bipolar' + SIDE_SUFFIX[side] + '.png'),
+        plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],pathway_filtered[i]+'_ANN_abs_errors_on_Bipolar' + SIDE_SUFFIX[side] + '.png'),
                     format='png',
-                    dpi=1000)
+                    dpi=500)
 
         plt.figure()
         for i in range(len(pathway_filtered)):
 
             if np.max(abs(error_ANN_mono[:,i])) > 0.05:
-                sns.kdeplot(error_ANN_mono[:,i], bw_adjust=0.5, label=pathway_filtered[i])
+                matplotlib_kdeplot(error_ANN_mono[:,i], label=pathway_filtered[i])
 
         plt.legend()
         plt.title('Abs errors for ANN on Bipolar')
-        # plt.xlim([-0.15,0.15])
-        plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],'ANN_abs_errors_on_Monopolar' + SIDE_SUFFIX[side] + '.png'),
-                    format='png',
-                    dpi=1000)
+        plt.xlim([-0.15,0.15])
+        plt.savefig(os.path.join(stim_dir,'NB' + SIDE_SUFFIX[side],pathway_filtered[i]+'_ANN_abs_errors_on_Monopolar' + SIDE_SUFFIX[side] + '.png'),
+                    format='png', dpi=500)
 
     # ====================================== Check if errors acceptable ===============================================#
 
@@ -297,10 +328,12 @@ def train_test_ANN(stim_dir,res_folder, TrainTest_currents_file, trainSize, Err_
         for i in range(len(activ_threshold_profile)):
 
             if activ_threshold_profile[i] in Pathways and not (activ_threshold_profile[i] in pathway_filtered):
-                print(activ_threshold_profile[i], " had a low activation for training set, and was not added to ANN")
+                #print(activ_threshold_profile[i], " had a low activation for training set, and was not added to ANN")
+                continue
             elif not (activ_threshold_profile[i] in Pathways):
-                print(activ_threshold_profile[i],
-                      " was not in the training set. Perhaps, it is too far from the electrode")
+                #print(activ_threshold_profile[i],
+                #      " was not in the training set. Perhaps, it is too far from the electrode")
+                continue # different pathway
             else:
                 inx = pathway_filtered.index(activ_threshold_profile[i])
                 if np.any(error_ANN[:, inx] > Err_threshold):
@@ -320,8 +353,9 @@ def train_test_ANN(stim_dir,res_folder, TrainTest_currents_file, trainSize, Err_
                             'Error threshold for ', activ_threshold_profile[i],' was exceeded, the approximation model has to be revised')
                         return False
 
-    model.save(os.path.join(stim_dir, 'NB' + SIDE_SUFFIX[side], 'ANN_approved_model_' + pathway))
-    return pathway_filtered
+                # one pathway training
+                model.save(os.path.join(stim_dir, 'NB' + SIDE_SUFFIX[side], 'ANN_approved_model_' + pathway))
+                return pathway_filtered
 
 if __name__ == '__main__':
 
