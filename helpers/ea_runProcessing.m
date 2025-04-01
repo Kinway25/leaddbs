@@ -79,21 +79,21 @@ options.coregct.method = 'ANTs (Avants 2008)';
 % Pre-coregister pre-op anchor image
 if ismember(opts.process, {'pre', 'both'})
     if isfield(options.subj, 'preopAnat')
-        if ~isfile(options.subj.preopAnat.(fields{1}).coreg)
-            ea_precoreg(options.subj.preopAnat.(fields{1}).preproc, ... % Input anchor image
+        if ~isfile(options.subj.preopAnat.(options.subj.AnchorModality).coreg)
+            ea_precoreg(options.subj.preopAnat.(options.subj.AnchorModality).preproc, ... % Input anchor image
                 options.primarytemplate, ... % Template to use
-                options.subj.preopAnat.(fields{1}).coreg, ... % Output pre-coregistered image
-                options.subj.coreg.transform.(fields{1})); % % Pre-coregistration transform
+                options.subj.preopAnat.(options.subj.AnchorModality).coreg, ... % Output pre-coregistered image
+                options.subj.coreg.transform.(options.subj.AnchorModality)); % % Pre-coregistration transform
     
             % Check if anchor image has been properly pre-coregistered. If
             % not, fallback to preproc image.
             try
-                load_nii(options.subj.preopAnat.(fields{1}).coreg);
+                load_nii(options.subj.preopAnat.(options.subj.AnchorModality).coreg);
             catch
                 ea_cprintf('CmdWinWarnings', 'Anchor image was not properly pre-coregistered. Fallback to preproc image instead.\n');
-                ea_delete(options.subj.coreg.transform.(fields{1}));
-                ea_mkdir(fileparts(options.subj.preopAnat.(fields{1}).coreg));
-                copyfile(options.subj.preopAnat.(fields{1}).preproc, options.subj.preopAnat.(fields{1}).coreg);
+                ea_delete(options.subj.coreg.transform.(options.subj.AnchorModality));
+                ea_mkdir(fileparts(options.subj.preopAnat.(options.subj.AnchorModality).coreg));
+                copyfile(options.subj.preopAnat.(options.subj.AnchorModality).preproc, options.subj.preopAnat.(options.subj.AnchorModality).coreg);
             end
         end
     end
