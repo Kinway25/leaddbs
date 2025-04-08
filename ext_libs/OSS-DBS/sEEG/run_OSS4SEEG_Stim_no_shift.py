@@ -173,8 +173,8 @@ if __name__ == '__main__':
     contacts = SEEG_stim_df.columns.tolist()
 
     # load default oss-dbs_parameters.json
-    with open('/home/forel/Documents/data/SEEG/code/oss-dbs_parameters.json', 'r') as fp:
-        ossdbs_dict = json.load(fp)
+    #with open('/home/forel/Documents/data/SEEG/code/oss-dbs_parameters.json', 'r') as fp:
+    #    ossdbs_dict = json.load(fp)
         
     # we actually rebuild the electrode for each stimulation to address the bend issue
     for stim_i in range(SEEG_stim_df.shape[0]):
