@@ -293,6 +293,14 @@ for group=groups
                         nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
                         thisvals=thisvals(:,~nanidx);
 
+
+                        thisvals = ea_SigmoidFromEfield(thisvals);
+                        thisvals(isnan(thisvals)) = 0.0;
+
+                        %nonempty=sum(thisvals(:,:),1)>0; % number of connected tracts
+                        %invals=thisvals(:,nonempty);
+
+
                         if obj.showsignificantonly
                             [R,p]=ea_corr(thisvals,I(gpatsel,side),obj.corrtype);
                             R=ea_corrsignan(R,p,obj);
