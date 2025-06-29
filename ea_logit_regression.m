@@ -14,12 +14,19 @@ end
 
 Ihat_train_fake = Ihat_train(Improvement(training) == 1,1);
 % FTG
-Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake];
-Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
+%Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake];
+%Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
 
 % ERNA
-%Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
-%Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
+Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
+Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
+
+% % allTransientEntrain
+% Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
+% Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
+
+%Ihat_train_balanced = Ihat_train;
+%Improvement_balanced = Improvement(training);
 
 mdl = fitglm(Ihat_train_balanced,Improvement_balanced ,'Distribution','binomial','Link','logit');
 

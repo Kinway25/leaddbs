@@ -279,12 +279,12 @@ classdef ea_sweetspot < handle
             % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            patientsel_all = patientsel;
-            [training_all, test_all] = LOPO(obj,patientsel_all);
+            % patientsel_all = patientsel;
+            % [training_all, test_all] = LOPO(obj,patientsel_all);
+            % 
+            % NumTestSets = 18;  % as many as patients
 
-            NumTestSets = 18;  % as many as patients
-
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
