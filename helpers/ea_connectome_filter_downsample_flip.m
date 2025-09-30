@@ -59,7 +59,7 @@ for k = 1:length(myFiles)
 
     if ROI_file
         % Trim connectome fibers by ROI
-        ROI_Ind = find(abs(ROI.img(:))>0.5);   % ROI is assumed to be binary
+        ROI_Ind = find(abs(ROI.img(:))>0.95);   % ROI is assumed to be binary
     
         % Trim connectome fibers
         [xvox, yvox, zvox] = ind2sub(size(ROI.img), ROI_Ind);
@@ -80,9 +80,13 @@ for k = 1:length(myFiles)
         fibVoxInd(cellfun(@(x) any(isnan(x)), fibVoxInd)) = [];
         trimmedFiberInd(cellfun(@(x) any(isnan(x)), fibVoxInd)) = [];
       
-        trimmedIdx = ftr_full.idx(trimmedFiberInd,:);
+        % more accurate filter
+        % Find connected fibers
+        connected = cellfun(@(fib) any(ismember(fib, ROI_Ind)), fibVoxInd);
+
+        trimmedIdx = ftr_full.idx(trimmedFiberInd(connected),:);
         % restore complete trimmed fibers
-        trimmedFiber = ftr_full.fibers(ismember(ftr_full.fibers(:,4), trimmedFiberInd), :);
+        trimmedFiber = ftr_full.fibers(ismember(ftr_full.fibers(:,4), trimmedFiberInd(connected)), :);
     else
         trimmedFiber = ftr_full.fibers;
         trimmedIdx = ftr_full.idx;

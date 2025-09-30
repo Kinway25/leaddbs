@@ -9,17 +9,17 @@ if Ihat_train == 0
 end
 
 % first, we fit a logit function for our binary prediction
-%mdl = fitglm(Ihat_train,Improvement(training),'Distribution','binomial','Link','logit');
+mdl = fitglm(Ihat_train,Improvement(training),'Distribution','binomial','Link','logit');
 
 
-Ihat_train_fake = Ihat_train(Improvement(training) == 1,1);
+%Ihat_train_fake = Ihat_train(Improvement(training) == 1,1);
 % FTG
 %Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake];
 %Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
 
 % ERNA
-Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
-Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
+%Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
+%Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1);true(size(Ihat_train_fake,1),1)];
 
 % % allTransientEntrain
 % Ihat_train_balanced = [Ihat_train;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake;Ihat_train_fake];
@@ -28,13 +28,13 @@ Improvement_balanced = [Improvement(training);true(size(Ihat_train_fake,1),1);tr
 %Ihat_train_balanced = Ihat_train;
 %Improvement_balanced = Improvement(training);
 
-mdl = fitglm(Ihat_train_balanced,Improvement_balanced ,'Distribution','binomial','Link','logit');
+%mdl = fitglm(Ihat_train_balanced,Improvement_balanced ,'Distribution','binomial','Link','logit');
 
 
 % second, we run ROC curve analysis
 scores = mdl.Fitted.Probability;
-%[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
-[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement_balanced,scores,1);
+[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
+%[X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement_balanced,scores,1);
 figure, plot(X,Y, 'k', 'linew', 1.5)
 set(gcf,'color','w');
 hold on
