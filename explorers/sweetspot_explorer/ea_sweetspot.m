@@ -273,15 +273,15 @@ classdef ea_sweetspot < handle
                 patientsel = obj.customselection;
             end
 
-            %threshold_STN_bin = obj.setselections{1,1}(1,obj.patientselection);
+            % %threshold_STN_bin = obj.setselections{1,3}(1,obj.patientselection);
             % patientsel_all = 1:size(obj.setselections{1,1},2);
             % patientsel_all = patientsel_all';
-            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,2});
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
             patientsel_all = patientsel;
             [training_all, test_all] = LOPO(obj,patientsel_all);
-
+            % 
             NumTestSets = 18;  % as many as patients
 
             %NumTestSets = cvp.NumTestSets;
@@ -433,8 +433,8 @@ classdef ea_sweetspot < handle
                                 %test = cvp.test(c);
                                 training = training_shell(:,c);
                                 test = test_all(:,c);
-                                %training = training_all(:,c);
-                                %test = test_all(:,c);
+                                % training = training_all(:,c);
+                                % test = test_all(:,c);
                             elseif isstruct(cvp)
                                 training = cvp.training{c};
                                 test = cvp.test{c};
