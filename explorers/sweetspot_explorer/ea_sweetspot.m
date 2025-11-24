@@ -279,12 +279,16 @@ classdef ea_sweetspot < handle
             % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,1});
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
 
-            patientsel_all = patientsel;
-            [training_all, test_all] = LOPO(obj,patientsel_all);
-            % 
-            NumTestSets = 18;  % as many as patients
+            %patientsel_all = patientsel;
+            % [training_all, test_all] = LOPO(obj,patientsel_all);
+            % NumTestSets = 18;
 
-            %NumTestSets = cvp.NumTestSets;
+            % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
+            % NumTestSets = 24;
+            % 
+            % NumTestSets = 18;  % as many as patients
+
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -308,8 +312,8 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    %training = cvp.training(c);
-                    %test = cvp.test(c);
+                    % % training = cvp.training(c);
+                    % % test = cvp.test(c);
 
                     training = training_all(:,c);
                     test = test_all(:,c);
@@ -325,7 +329,7 @@ classdef ea_sweetspot < handle
                 if obj.useExternalModel == true && ~strcmp(obj.ExternalModelFile, 'None')
                     % load external model, and assign vals from the
                     % external model.
-                    S=ea_sweetspot_importedModel2Efields(obj, obj.ExternalModelFile);;
+                    S=ea_sweetspot_importedModel2Efields(obj, obj.ExternalModelFile);
                     if obj.cvlivevisualize
                         [vals] = S.model_vals;
                         obj.draw(vals);
@@ -431,10 +435,10 @@ classdef ea_sweetspot < handle
                             if isobject(cvp)
                                 %training = cvp.training(c);
                                 %test = cvp.test(c);
-                                training = training_shell(:,c);
-                                test = test_all(:,c);
-                                % training = training_all(:,c);
+                                % training = training_shell(:,c);
                                 % test = test_all(:,c);
+                                training = training_all(:,c);
+                                test = test_all(:,c);
                             elseif isstruct(cvp)
                                 training = cvp.training{c};
                                 test = cvp.test{c};
@@ -467,8 +471,16 @@ classdef ea_sweetspot < handle
                         AUC = ea_logit_regression(0 ,Ihat_av_sides, I, 1:size(I,1), 1:size(I,1));
                     end
                 elseif isstruct(cvp)
-                    Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
-                    AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
+
+                    if obj.useExternalModel == true
+                        Ihat_train_global_av_sides = 0;
+                        training = test;
+                        AUC = ea_logit_regression(0, Ihat_av_sides, I, training, test);
+                    else
+                        Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
+                        AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
+                    end
+                   
                 end
             end
 
