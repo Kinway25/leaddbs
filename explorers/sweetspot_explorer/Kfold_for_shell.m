@@ -4,11 +4,16 @@ function [training_sets,test_sets] = Kfold_for_shell(obj,patientsel,patientsel_t
 %PT_names = unique(data_flat_JB.pt_label);
 
 load('/home/forel/Documents/data/JB_project/JK_SW_table_18.mat')
+N_folds = 18;
+
+% load('/home/forel/Documents/data/JB_project/Cologne/LOPOtableCologne.mat')
+% data_flat_SW = data_flat;
+% N_folds = 24;
+
 PT_names = string(unique(data_flat_SW.subject));
 
 %N_PTs = length(PT_names);
 my_indices = randperm(length(PT_names));
-N_folds = 18;
 
 % here you need to split into nearly equal folds, e.g
 %N_elements = [4,4,4,4,4,4,4,4,5,5];
@@ -58,7 +63,8 @@ for fold_i = 1:N_folds
 
     for vta_j = 1:length(patientsel)
         temp2=strsplit(obj.M.patient.list{patientsel(vta_j)},'-');
-        pt_ID2 = ['0',temp2{2}(1:2)]; 
+        %pt_ID2 =  ['0',temp2{2}(5:6)];   % Cologne
+        pt_ID2 = ['0',temp2{2}(1:2)];    % Berlin
 
         if ismember(vta_j,patientsel_train) && ~any(strcmp(fold_out{1,fold_i},pt_ID2))
             if threshold_STN_bin(1,vta_j) == 1
