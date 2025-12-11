@@ -44,6 +44,7 @@ for side = 1:numSide
                 continue;
             end
         end
+
         % Threshold the vat efield
         vatInd = find(abs(vat.img(:))>thresh);
 
@@ -81,6 +82,29 @@ for side = 1:numSide
         fibsvalMean{side}(trimmedFiberInd(connected), pt) = cellfun(@mean, vals);
         fibsvalPeak{side}(trimmedFiberInd(connected), pt) = cellfun(@max, vals);
         fibsval5Peak{side}(trimmedFiberInd(connected), pt) = cellfun(@(x) mean(maxk(x,ceil(0.05*numel(x)))), vals);
+
+        % SVD correction
+        vals_min = cellfun(@min, vals);
+
+        if any(vals_min == -2)
+            disp("PVS intersection detected")
+            % hopefully, this won't break the pipeline
+            fibsvalBin{side}(vals_min == -2, pt) = nan;
+            fibsvalSum{side}(vals_min == -2, pt) = nan;
+            fibsvalMean{side}(vals_min == -2, pt) = nan;
+            fibsvalPeak{side}(vals_min == -2, pt) = nan;
+            fibsval5Peak{side}(vals_min == -2, pt) = nan;
+        end
+
+        if any(vals_min == -1)
+            disp("WMH/lacunes intersection detected")
+            fibsvalBin{side}(vals_min == -1, pt) = 0;
+            fibsvalSum{side}(vals_min == -1, pt) = 0;
+            fibsvalMean{side}(vals_min == -1, pt) = 0;
+            fibsvalPeak{side}(vals_min == -1, pt) = 0;
+            fibsval5Peak{side}(vals_min == -1, pt) = 0;
+        end
+        
     end
 
     % Remove values for not connected fibers, convert to sparse matrix

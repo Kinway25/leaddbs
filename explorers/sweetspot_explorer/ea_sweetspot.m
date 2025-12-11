@@ -289,18 +289,18 @@ classdef ea_sweetspot < handle
             % NumTestSets = 24;  % as many as patients
 
 
-            patientsel_all = patientsel;
+            %patientsel_all = patientsel;
             % % [training_all, test_all] = LOPO(obj,patientsel_all);
             % % NumTestSets = 18;
             % 
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
-            [training_all, test_all] = LOPO_JS(obj,patientsel_all);
-            NumTestSets = 19;
+            % [training_all, test_all] = LOPO_JS(obj,patientsel_all);
+            % NumTestSets = 19;
             % 
 
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -324,11 +324,11 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    % training = cvp.training(c);
-                    % test = cvp.test(c);
-
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
+                    % 
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
 
                     % training = training_shell(:,c);
                     % test = test_all(:,c);

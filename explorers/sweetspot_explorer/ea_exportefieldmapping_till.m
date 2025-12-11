@@ -64,6 +64,14 @@ for vat=1:size(vatlist,1)
             AllX{side}=zeros(size(vatlist,1),numel(nii.img));
         end
         AllX{side}(vat,:)=nii.img(:);
+
+        % PVS
+        AllX{side}(AllX{side} == -2) = nan;  % exclude these instances (hopefully this won't break the pipeline)
+        % WMH and lacunes
+        AllX{side}(AllX{side} == -1) = 0.0;  % damaged (no activation)   
+
+        % make sure no negative entries remain!
+
     end
 end
 ea_delete([outdir,'template.nii']);
