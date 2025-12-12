@@ -410,10 +410,10 @@ classdef ea_disctract < handle
         function calculate_on_efield(obj,cfile)
             if isfield(obj.M,'pseudoM')
                 vatlist=obj.M.ROI.list;
-                [obj.customRoi.isbinary,obj.customRoi.minmax]=ea_discfibers_checkcustomNii(vatlist);
-                if obj.customRoi.isbinary
-                    obj.statsettings.stimulationmodel='VTA';
-                end
+                % [obj.customRoi.isbinary,obj.customRoi.minmax]=ea_discfibers_checkcustomNii(vatlist);
+                % if obj.customRoi.isbinary
+                %     obj.statsettings.stimulationmodel='VTA';
+                % end
             else
                 [vatlist,~] = ea_discfibers_getvats(obj);
             end
