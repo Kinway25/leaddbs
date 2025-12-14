@@ -779,8 +779,8 @@ classdef ea_disctract < handle
                 cvIndices = cvp;
                 cvID = unique(cvIndices);
                 cvp = struct;
-                cvp.NumTestSets = length(cvID);
-                for i=1:cvp.NumTestSets
+                NumTestSets = length(cvID);
+                for i=1:NumTestSets
                     cvp.training{i} = cvIndices~=cvID(i);
                     cvp.test{i} = cvIndices==cvID(i);
                 end
@@ -792,6 +792,12 @@ classdef ea_disctract < handle
             else
                 patientsel = obj.customselection;
             end
+
+            % patientsel_all = patientsel;
+            % [training_all, test_all] = LOPO_JS(obj,patientsel_all);
+            % NumTestSets = 19;
+
+            NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -816,10 +822,10 @@ classdef ea_disctract < handle
             % Ihat is the estimate of improvements (not scaled to real improvements)
             if strcmp(obj.multitractmode,'Single Tract Analysis')
                 Ihat = nan(length(patientsel),2);
-                Ihat_train_global = nan(cvp.NumTestSets,length(patientsel),2);
+                Ihat_train_global = nan(NumTestSets,length(patientsel),2);
             else
                 Ihat = nan(length(patientsel),2,length(obj.subscore.vars));
-                Ihat_train_global = nan(cvp.NumTestSets,length(patientsel),2,length(obj.subscore.vars));
+                Ihat_train_global = nan(NumTestSets,length(patientsel),2,length(obj.subscore.vars));
             end
 
             if obj.useExternalModel == true && ~strcmp(obj.ExternalModelFile, 'None')
@@ -839,10 +845,10 @@ classdef ea_disctract < handle
 
             % for nested LOO, store some statistics
             if obj.nestedLOO
-                Abs_pred_error = zeros(cvp.NumTestSets, 1);
+                Abs_pred_error = zeros(NumTestSets, 1);
                 Predicted_scores = zeros(length(patientsel), 1);
-                Slope = zeros(cvp.NumTestSets, 1);
-                Intercept = zeros(cvp.NumTestSets, 1);
+                Slope = zeros(NumTestSets, 1);
+                Intercept = zeros(NumTestSets, 1);
 
             end
 
@@ -851,16 +857,19 @@ classdef ea_disctract < handle
                 obj.adj_scaler = 0.0;
             end
             obj.adj_scaler = 0.0;
-            for c=1:cvp.NumTestSets
-                if cvp.NumTestSets ~= 1
+            for c=1:NumTestSets
+                if NumTestSets ~= 1
                     if ~silent
-                        fprintf(['\nIterating set: %0',num2str(numel(num2str(cvp.NumTestSets))),'d/%d\n'], c, cvp.NumTestSets);
+                        fprintf(['\nIterating set: %0',num2str(numel(num2str(NumTestSets))),'d/%d\n'], c, NumTestSets);
                     end
                 end
 
                 if isobject(cvp)
                     training = cvp.training(c);
                     test = cvp.test(c);
+
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -871,10 +880,10 @@ classdef ea_disctract < handle
                     % use all patients, but outer loop left-out is always 0
                     if strcmp(obj.multitractmode,'Single Tract Analysis')
                         Ihat_inner = nan(length(patientsel),2);
-                        Ihat_train_global_inner = nan(cvp.NumTestSets,length(patientsel),2);
+                        Ihat_train_global_inner = nan(NumTestSets,length(patientsel),2);
                     else
                         Ihat_inner = nan(length(patientsel),2,length(obj.subscore.vars));
-                        Ihat_train_global_inner = nan(cvp.NumTestSets,length(patientsel),2,length(obj.subscore.vars));
+                        Ihat_train_global_inner = nan(NumTestSets,length(patientsel),2,length(obj.subscore.vars));
                     end
                     for test_i = 1:length(training)
                         training_inner = training;
@@ -942,12 +951,12 @@ classdef ea_disctract < handle
             if ~silent
                 % plot patient score correlation matrix over folds
                 if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
-                    if cvp.NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
+                    if NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
 
                         % put training and test scores together
-                        Ihat_combined = cell(1,cvp.NumTestSets);
+                        Ihat_combined = cell(1,NumTestSets);
                         %Ihat_combined = Ihat_train_global;
-                        for c=1:cvp.NumTestSets
+                        for c=1:NumTestSets
                             if isobject(cvp)
                                 training = cvp.training(c);
                                 test = cvp.test(c);
@@ -988,9 +997,9 @@ classdef ea_disctract < handle
                 disp(LM_values_intercept)
 
                 % visualize lms and CIs for 5-fold or less
-                if cvp.NumTestSets < 6
+                if NumTestSets < 6
                     groups_nested = zeros(length(Predicted_scores),1);
-                    for group_idx = 1:cvp.NumTestSets
+                    for group_idx = 1:NumTestSets
                         groups_nested(cvp.test(group_idx)) = group_idx;
                     end
                     side = 1;
@@ -1015,7 +1024,7 @@ classdef ea_disctract < handle
                         end
                 end
                 numVoters = size(val_struct{c}.vals,1);
-                 for c=1:cvp.NumTestSets
+                 for c=1:NumTestSets
                     if isobject(cvp)
                         training = cvp.training(c);
                         test = cvp.test(c);
@@ -1095,7 +1104,7 @@ classdef ea_disctract < handle
 
 
                 % quantify the prediction accuracy (if Train-Test)
-                if cvp.NumTestSets == 1 && voter == 1 && size(obj.responsevar,2) == 1 && (~exist('Iperm', 'var') || isempty(Iperm))
+                if NumTestSets == 1 && voter == 1 && size(obj.responsevar,2) == 1 && (~exist('Iperm', 'var') || isempty(Iperm))
                     side = 1;
                     SS_tot = var(useI(test)) * (length(useI(test)) - 1); % just a trick to use one line
                     SS_res = sum((Ihat_voters_prediction(test,side,1) - useI(test)).^2);
@@ -1206,7 +1215,7 @@ classdef ea_disctract < handle
                     %Ihat=squeeze(Ihat_voters);
             end
             if ~iscell(Ihat)
-                if cvp.NumTestSets == 1
+                if NumTestSets == 1
                     Ihat = Ihat(test,:);
                     Improvement = Improvement(test);
                 end
