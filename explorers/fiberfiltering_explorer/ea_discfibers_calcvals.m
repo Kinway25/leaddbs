@@ -78,7 +78,6 @@ for side = 1:numSide
         %vals = cellfun(@(fib) vat.img(intersect(fib, vatInd)), fibVoxInd(connected), 'Uni', 0);
         vals = cellfun(@(fib) vat.img(intersect(fib, vatInd_ext)), fibVoxInd(connected), 'Uni', 0);
 
-
         % SVD correction
         vals_min = cellfun(@min, vals);
 

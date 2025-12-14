@@ -153,6 +153,9 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
                 end
                 vals_flat = vertcat(vals{voter,:});
                 fibsval_usedidx_flat = vertcat(fibsval_usedidx{:});
+
+                % at this point, we can swap NaNs to 0s (the model was already computed)
+                fibsval_usedidx_flat(isnan(fibsval_usedidx_flat)) = 0.0;
             end
 
             if ~isempty(vals{voter,side})
