@@ -182,11 +182,11 @@ for group=groups
 
         % check connthreshold
         if obj.runwhite || strcmp(obj.statsettings.stattest,'N-Map')
-            Nmap=sum(gfibsval{side}(:,gpatsel),2);
+            Nmap=ea_nansum(gfibsval{side}(:,gpatsel),2);
         else
             switch obj.statsettings.stimulationmodel
                 case 'VTA'
-                    Nmap=sum(gfibsval{side}(:,gpatsel),2);
+                    Nmap=ea_nansum(gfibsval{side}(:,gpatsel),2);
 %                 case 'Sigmoid Field'
 %                     if strcmp(ea_method2methodid(obj), 'spearman_5peak') || strcmp(ea_method2methodid(obj), 'spearman_peak')
 %                         % 0.5 V / mm -> 0.5 probability
@@ -195,16 +195,16 @@ for group=groups
 %                         Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
 %                     end
                 case 'Sigmoid Field'
-                    Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
+                    Nmap=ea_nansum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
                 case 'Electric Field'
-                    Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
+                    Nmap=ea_nansum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
             end
         end
         % remove fibers that are not connected to enough VTAs/Efields or connected
         % to too many VTAs (connthreshold slider)
         if ~obj.runwhite
             gfibsval{side}(Nmap<((obj.statsettings.connthreshold/100)*length(gpatsel)),gpatsel)=nan;
-            if strcmp(obj.statsettings.stimulationmodel,'VTA')
+            if strcmp(obj.statsettings.stimulationmodel,'VTA') & ~strcmp(obj.statsettings.stattest,'N-Map')
                 % only in case of VTAs (given two-sample-t-test statistic) do we
                 % need to also exclude if tract is connected to too many VTAs:
                 gfibsval{side}(Nmap>((1-(obj.statsettings.connthreshold/100))*length(gpatsel)),gpatsel)=nan;

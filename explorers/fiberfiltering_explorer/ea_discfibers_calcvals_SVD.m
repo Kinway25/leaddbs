@@ -1,4 +1,4 @@
-function [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals(vatlist, cfile, thresh)
+function [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell, connFiberInd, totalFibers] = ea_discfibers_calcvals_SVD(vatlist, cfile, thresh)
 % Calculate fiber connection values based on the VATs and the connectome
 
 disp('Load Connectome...');
@@ -49,7 +49,6 @@ for side = 1:numSide
 
         % bb including SVDs 
         vatInd_ext = find(abs(vat.img(:))>thresh | vat.img(:) == -1 | vat.img(:) == -2);
-        %vatInd_ext = find(abs(vat.img(:))>thresh);
 
         % Trim connectome fibers
         %[xvox, yvox, zvox] = ind2sub(size(vat.img), vatInd);
@@ -82,31 +81,31 @@ for side = 1:numSide
         % SVD correction
         vals_min = cellfun(@min, vals);
 
-        fibsvalBin{side}(trimmedFiberInd(connected), pt)=1;
-        fibsvalSum{side}(trimmedFiberInd(connected), pt) = cellfun(@sum, vals);
-        fibsvalMean{side}(trimmedFiberInd(connected), pt) = cellfun(@mean, vals);
-        fibsvalPeak{side}(trimmedFiberInd(connected), pt) = cellfun(@max, vals);
-        fibsval5Peak{side}(trimmedFiberInd(connected), pt) = cellfun(@(x) mean(maxk(x,ceil(0.05*numel(x)))), vals);
+        % fibsvalBin{side}(trimmedFiberInd(connected), pt)=1;
+        % fibsvalSum{side}(trimmedFiberInd(connected), pt) = cellfun(@sum, vals);
+        % fibsvalMean{side}(trimmedFiberInd(connected), pt) = cellfun(@mean, vals);
+        % fibsvalPeak{side}(trimmedFiberInd(connected), pt) = cellfun(@max, vals);
+        % fibsval5Peak{side}(trimmedFiberInd(connected), pt) = cellfun(@(x) mean(maxk(x,ceil(0.05*numel(x)))), vals);
 
         trimmedFiberInd_conn = trimmedFiberInd(connected);
 
-        if any(vals_min == -1)
+        if any(vals_min == -2)
             disp("WMH/lacunes intersection detected")
-            fibsvalBin{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-            fibsvalSum{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-            fibsvalMean{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-            fibsvalPeak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-            fibsval5Peak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+            fibsvalBin{side}(trimmedFiberInd_conn(vals_min == -2), pt) = 1;
+            % fibsvalSum{side}(trimmedFiberInd_conn(vals_min == -0.9), pt) = 0;
+            % fibsvalMean{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+            % fibsvalPeak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+            % fibsval5Peak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
         end
 
-        if any(vals_min == -2)
-            disp("PVS intersection detected")
-            fibsvalBin{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-            fibsvalSum{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-            fibsvalMean{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-            fibsvalPeak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-            fibsval5Peak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-        end
+        % if any(vals_min == -2)
+        %     disp("PVS intersection detected")
+        %     fibsvalBin{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+        %     fibsvalSum{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+        %     fibsvalMean{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+        %     fibsvalPeak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+        %     fibsval5Peak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+        % end
     
     end
 
