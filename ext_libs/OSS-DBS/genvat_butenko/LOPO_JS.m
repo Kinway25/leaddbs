@@ -1,6 +1,6 @@
 function [training_sets,test_sets] = LOPO_JS(obj,patientsel)
 
-load('/home/interscan/Documents/data/JS/ReFitCohort_Avg.mat')
+load('/home/forel/Documents/data/JS/ReFitCohort_Avg.mat')
 PT_names = string(unique(pseudoM_table.ID));
 
 % load('/home/forel/Documents/data/JB_project/JK_SW_table_18.mat')
