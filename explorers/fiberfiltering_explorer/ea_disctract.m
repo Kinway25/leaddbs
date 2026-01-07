@@ -793,11 +793,11 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
-            % patientsel_all = patientsel;
-            % [training_all, test_all] = LOPO_JS(obj,patientsel_all);
-            % NumTestSets = 19;
+            patientsel_all = patientsel;
+            [training_all, test_all] = LOPO_JS(obj,patientsel_all);
+            NumTestSets = 19;
 
-            NumTestSets = cvp.NumTestSets;
+            %NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -865,11 +865,11 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    training = cvp.training(c);
-                    test = cvp.test(c);
+                    % training = cvp.training(c);
+                    % test = cvp.test(c);
 
-                    % training = training_all(:,c);
-                    % test = test_all(:,c);
+                    training = training_all(:,c);
+                    test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -948,45 +948,48 @@ classdef ea_disctract < handle
 
             end
 
-            if ~silent
-                % plot patient score correlation matrix over folds
-                if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
-                    if NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
-
-                        % put training and test scores together
-                        Ihat_combined = cell(1,NumTestSets);
-                        %Ihat_combined = Ihat_train_global;
-                        for c=1:NumTestSets
-                            if isobject(cvp)
-                                training = cvp.training(c);
-                                test = cvp.test(c);
-                            elseif isstruct(cvp)
-                                training = cvp.training{c};
-                                test = cvp.test{c};
-                            end
-
-                            Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
-                            Ihat_combined{c}(test,1) = Ihat(test,1);
-                        end
-
-                        r_Ihat = zeros(size(Ihat_combined,2));
-
-                        for i = 1:size(r_Ihat,1)
-                            for j = 1:size(r_Ihat,1)
-                                [r_Ihat(i,j),~]=ea_permcorr(Ihat_combined{i},Ihat_combined{j},'spearman');
-                            end
-                        end
-
-                        figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
-                        imagesc(triu(r_Ihat)); % Display correlation matrix as an image
-                        title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
-                        colormap('bone');
-                        cb = colorbar;
-                        % set(cb)
-
-                    end
-                end
-            end
+            % if ~silent
+            %     % plot patient score correlation matrix over folds
+            %     if (~exist('shuffle', 'var')) || shuffle == 0 || isempty(shuffle)
+            %         if NumTestSets ~= 1 && (strcmp(obj.multitractmode,'Single Tract Analysis') || strcmp(obj.multitractmode,'Single Tract Analysis Button'))
+            % 
+            %             % put training and test scores together
+            %             Ihat_combined = cell(1,NumTestSets);
+            %             %Ihat_combined = Ihat_train_global;
+            %             for c=1:NumTestSets
+            %                 if isobject(cvp)
+            %                     training = training_all(:,c);
+            %                     test = test_all(:,c);
+            % 
+            %                     %training = cvp.training(c);
+            %                     %test = cvp.test(c);
+            %                 elseif isstruct(cvp)
+            %                     training = cvp.training{c};
+            %                     test = cvp.test{c};
+            %                 end
+            % 
+            %                 Ihat_combined{c}(training,1) = Ihat_train_global(c,training,1)';
+            %                 Ihat_combined{c}(test,1) = Ihat(test,1);
+            %             end
+            % 
+            %             r_Ihat = zeros(size(Ihat_combined,2));
+            % 
+            %             for i = 1:size(r_Ihat,1)
+            %                 for j = 1:size(r_Ihat,1)
+            %                     [r_Ihat(i,j),~]=ea_permcorr(Ihat_combined{i},Ihat_combined{j},'spearman');
+            %                 end
+            %             end
+            % 
+            %             figure('Name','Patient scores'' correlations','Color','w','NumberTitle','off')
+            %             imagesc(triu(r_Ihat)); % Display correlation matrix as an image
+            %             title('Patient scores'' correlations over folds', 'FontSize', 16); % set title
+            %             colormap('bone');
+            %             cb = colorbar;
+            %             % set(cb)
+            % 
+            %         end
+            %     end
+            % end
             if obj.nestedLOO
                 % cvs = 'L-O-O-O';
                 % h = ea_corrbox(Improvement,Predicted_dif_models,'permutation',{['Disc. Fiber prediction ',upper(cvs)],empiricallabel,fibscorelabel});
