@@ -304,7 +304,11 @@ if isscalar(uipatdir) && isfield(handles, 'side1')
             if ~isempty(recoType)
                 for el=1:length(reco.(recoType).markers)
                     if ~isempty(reco.(recoType).markers(el).head)
-                        set(handles.(['side',num2str(el)]), 'Value', 1);
+%                         set(handles.(['side',num2str(el)]), 'Value', 1);
+                        sf = ['side', num2str(el)];
+                        if isfield(handles, sf) %&& isgraphics(handles.(sf))
+                            set(handles.(sf), 'Value', 1);
+                        end
                     end
                 end
             end
@@ -353,6 +357,15 @@ if isscalar(uipatdir) && isfield(handles, 'side1')
     end
 end
 
+try
+    handles = ea_attach_electrodes_to_handles(handles, uipatdir{1});
+    if isfield(handles,'leadfigure') && isgraphics(handles.leadfigure)
+        setappdata(handles.leadfigure,'electrodes',handles.currentPatient.electrodes);
+    end
+catch ME
+    ea_cprintf('CmdWinWarnings', 'Multi‑electrode attach failed:\n%s\n', ME.message);
+end
+
 % add VATs to seeds for connectome mapper or predict case
 if isfield(handles,'seeddefpopup')
     for pt=1:length(uipatdir)
@@ -392,8 +405,7 @@ end
 
 function checkFlag = isLegacyFolder(inputFolder)
 
-checkFlag = isfile(fullfile(inputFolder, 'ea_ui.mat')) || isfile(fullfile(inputFolder, 'glanat.nii')) ...
-    || isfile(fullfile(inputFolder, 'ea_reconstruction.mat')); % Sometimes reconstruction file is not available
+checkFlag = isfile(fullfile(inputFolder, 'ea_ui.mat')) || isfile(fullfile(inputFolder, 'ea_reconstruction.mat'));
 
 
 function [checkFlag, BIDSRoot, subjId] = isBIDSFolder(inputFolder)
@@ -482,3 +494,4 @@ if ~isempty(regexp(subjId, '[\W_]', 'once'))
     subjId = regexprep(subjId, '[\W_]', '');
     ea_cprintf('CmdWinWarnings', 'It looks like you have special chars in your subj folder name.\nWe will use a cleaned name ''%s'' for the BIDS dataset. Please check manually.\n', subjId);
 end 
+
