@@ -5,6 +5,10 @@ function [cfile, map_list, pathway_list] = ea_discfibers_merge_pathways(obj)
 % also returns global indices of the first fibers in pathways and the
 % corresponding list of pathways' names
 
+MAP_LH2RH = true;  % if true, maps all LH fiber states to RH fibers (only for mirrored connectomes)
+                    % custom setting that assumes 
+BURN_IN_SVDs = true;  % make sure the SVD path is correct (do not use flipped!!!)
+
 myDir = [ea_getconnectomebase('dMRI_MultiTract'), obj.connectome];
 myFiles = dir(fullfile(myDir,'*.mat')); %gets all mat files in struct
 myFiles = myFiles(~endsWith({myFiles.name}, '_ADJ.mat'));
@@ -209,6 +213,7 @@ for sub=1:numPatient
             C_fibState_idx{k} = C_idx{k};
         end
 
+
         if ~exist('fib_state_raw')
             ea_cprintf('CmdWinWarnings', "   No fiber activation files were found for %s on the %s side \n",subj_tag,side_name)
         else
@@ -217,6 +222,73 @@ for sub=1:numPatient
             ftr2.fibers = cat(1, C_fibState{:});
             ftr2.idx = cat(1, C_fibState_idx{:});
     
+            if BURN_IN_SVDs
+                SVD_path = ['/media/interscan/BackupKB/JS_VTAs_SVDs/',subj_tag,'/SVD/'];
+                WMH_file = [SVD_path,'WMH.nii.gz'];
+                PVS_file = [SVD_path,'PVS.nii.gz'];
+                lacunes_file = [SVD_path,'lacunes.nii.gz'];
+
+                [fib_index_in_WMH,fib_index_in_PVS,fib_index_in_lacunes] = ea_connectome_SVD_filter(ftr_full, WMH_file, PVS_file, lacunes_file);
+                
+                % "unknown status" for PVS
+                if fib_index_in_PVS
+                    ftr2.fibers(fib_index_in_PVS,5) = nan;
+                end
+
+                % "disconnect" WMH and lacune fibers
+                if fib_index_in_WMH
+                    ftr2.fibers(fib_index_in_WMH,5) = 0;
+                end
+                if fib_index_in_lacunes
+                    ftr2.fibers(fib_index_in_lacunes,5) = 0;
+                end
+
+            end
+
+            if MAP_LH2RH && assume_mirrored && side == 2
+                % map LH statuses to RH
+                % obj.map_list (order is path1_rh,path1_lh,path2_rh...)
+                for pathway_i = 1:length(map_list)
+    
+                    if ~contains(pathway_list{pathway_i},'_flipped.mat')
+                        % skip RH pathways
+                        continue
+                    end
+    
+                    path_start = map_list(pathway_i);
+    
+                    if pathway_i ~= length(map_list)
+                        path_end = map_list(pathway_i+1) - 1;
+                    end
+    
+                    if rem(pathway_i,2)
+                        path_start_counter = map_list(pathway_i+1);
+                        if pathway_i == length(obj.map_list)-1
+                            %disp("prelast pathway")
+                        else
+                            path_end_counter = map_list(pathway_i+2) - 1;
+                        end
+                    else
+                        path_start_counter = map_list(pathway_i-1);
+                        path_end_counter = map_list(pathway_i) - 1;                        
+                    end
+    
+                    % copy fiber state to the counterpart
+                    if pathway_i == length(map_list)-1
+    
+                        ftr2.fibers(path_start:path_end,5) = ftr2.fibers(path_start_counter:end);
+                        ftr2.fibers(path_start_counter:end) = 0;  % no activation in LH
+                    elseif pathway_i == length(obj.map_list)
+                        ftr2.fibers(path_start:end) = ftr2.fibers(path_start_counter:path_end_counter);
+                        ftr2.fibers(path_start_counter:path_end_counter) = 0;  % no activation in LH
+                    else
+                        ftr2.fibers(path_start:path_end) = ftr2.fibers(path_start_counter:path_end_counter);
+                        ftr2.fibers(path_start_counter:path_end_counter) = 0;  % no activation in LH
+                    end
+                    %last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
+                end
+            end
+
             % store as fiberActivation_side.mat in the corresp. stim folder
             [filepath,~,~] = fileparts(pam_file);
             %BIDS notation
