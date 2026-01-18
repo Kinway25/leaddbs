@@ -223,24 +223,25 @@ for sub=1:numPatient
             ftr2.idx = cat(1, C_fibState_idx{:});
     
             if BURN_IN_SVDs
+                % This is a slow step
                 SVD_path = ['/media/interscan/BackupKB/JS_VTAs_SVDs/',subj_tag,'/SVD/'];
                 WMH_file = [SVD_path,'WMH.nii.gz'];
                 PVS_file = [SVD_path,'PVS.nii.gz'];
                 lacunes_file = [SVD_path,'lacunes.nii.gz'];
 
-                [fib_index_in_WMH,fib_index_in_PVS,fib_index_in_lacunes] = ea_connectome_SVD_filter(ftr_full, WMH_file, PVS_file, lacunes_file);
+                [fib_index_in_WMH,fib_index_in_PVS,fib_index_in_lacunes] = ea_connectome_SVD_filter(ftr2, WMH_file, PVS_file, lacunes_file);
                 
                 % "unknown status" for PVS
                 if fib_index_in_PVS
-                    ftr2.fibers(fib_index_in_PVS,5) = nan;
+                    ftr2.fibers(ismember(ftr2.fibers(:,4),fib_index_in_PVS),5) = nan;
                 end
 
                 % "disconnect" WMH and lacune fibers
                 if fib_index_in_WMH
-                    ftr2.fibers(fib_index_in_WMH,5) = 0;
+                    ftr2.fibers(ismember(ftr2.fibers(:,4),fib_index_in_WMH),5) = 0;
                 end
                 if fib_index_in_lacunes
-                    ftr2.fibers(fib_index_in_lacunes,5) = 0;
+                    ftr2.fibers(ismember(ftr2.fibers(:,4),fib_index_in_lacunes),5) = 0;
                 end
 
             end
@@ -250,15 +251,17 @@ for sub=1:numPatient
                 % obj.map_list (order is path1_rh,path1_lh,path2_rh...)
                 for pathway_i = 1:length(map_list)
     
-                    if ~contains(pathway_list{pathway_i},'_flipped.mat')
+                    if ~contains(pathway_list{pathway_i},'flipped.mat')
                         % skip RH pathways
                         continue
                     end
     
                     path_start = map_list(pathway_i);
+                    path_start_comp_idx = find(ftr2.fibers(:, 4) == path_start, 1, 'first');
     
                     if pathway_i ~= length(map_list)
                         path_end = map_list(pathway_i+1) - 1;
+                        path_end_comp_idx = find(ftr2.fibers(:, 4) == path_end, 1, 'last');
                     end
     
                     if rem(pathway_i,2)
@@ -272,18 +275,23 @@ for sub=1:numPatient
                         path_start_counter = map_list(pathway_i-1);
                         path_end_counter = map_list(pathway_i) - 1;                        
                     end
+
+                    % fiber comp index
+                    path_start_counter_comp_idx = find(ftr2.fibers(:, 4) == path_start_counter, 1, 'first');
+                    path_end_counter_comp_idx = find(ftr2.fibers(:, 4) == path_end_counter, 1, 'last');
+
+                    % you need to convert path counter to comp counter
     
                     % copy fiber state to the counterpart
                     if pathway_i == length(map_list)-1
-    
-                        ftr2.fibers(path_start:path_end,5) = ftr2.fibers(path_start_counter:end);
-                        ftr2.fibers(path_start_counter:end) = 0;  % no activation in LH
+                        ftr2.fibers(path_start_counter_comp_idx:end,5) = ftr2.fibers(path_start_comp_idx:path_end_comp_idx,5);
+                        ftr2.fibers(path_start_comp_idx:path_end_comp_idx,5) = 0;  % no activation in LH
                     elseif pathway_i == length(obj.map_list)
-                        ftr2.fibers(path_start:end) = ftr2.fibers(path_start_counter:path_end_counter);
-                        ftr2.fibers(path_start_counter:path_end_counter) = 0;  % no activation in LH
+                        ftr2.fibers(path_start_counter_comp_idx:path_end_counter_comp_idx,5) = ftr2.fibers(path_start_comp_idx:end,5);
+                        ftr2.fibers(path_start_comp_idx:end,5) = 0;  % no activation in LH
                     else
-                        ftr2.fibers(path_start:path_end) = ftr2.fibers(path_start_counter:path_end_counter);
-                        ftr2.fibers(path_start_counter:path_end_counter) = 0;  % no activation in LH
+                        ftr2.fibers(path_start_counter_comp_idx:path_end_counter_comp_idx,5) = ftr2.fibers(path_start_comp_idx:path_end_comp_idx,5);
+                        ftr2.fibers(path_start_comp_idx:path_end_comp_idx,5) = 0;  % no activation in LH
                     end
                     %last_loc_i = fib_state_raw.idx(fib_i)+last_loc_i;            
                 end

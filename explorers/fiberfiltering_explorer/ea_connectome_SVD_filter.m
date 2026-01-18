@@ -14,19 +14,19 @@ end
 if isfile(WMH_file)
     fib_index_in_WMH = trim_by_ROI(WMH_file,ftr_full);
 else
-    fib_index_in_WMH = None;
+    fib_index_in_WMH = false;
 end
 
 if isfile(PVS_file)
     fib_index_in_PVS = trim_by_ROI(PVS_file,ftr_full);
 else
-    fib_index_in_PVS = None;
+    fib_index_in_PVS = false;
 end
 
 if isfile(lacunes_file)
     fib_index_in_lacunes = trim_by_ROI(lacunes_file,ftr_full);
 else
-    fib_index_in_lacunes = None;
+    fib_index_in_lacunes = false;
 end
 
 end
@@ -45,7 +45,7 @@ function fib_index_in_ROI = trim_by_ROI(ROI_file,ftr_full)
 
     % discard the pathway if completely unconnected
     if ~any(filter)
-        fib_index_in_ROI = None;
+        fib_index_in_ROI = false;
         return
     end
 
