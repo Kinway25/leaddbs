@@ -38,6 +38,11 @@ function fib_index_in_ROI = trim_by_ROI(ROI_file,ftr_full)
     % Trim connectome fibers by ROI
     ROI_Ind = find(abs(ROI.img(:))>threshold);   % ROI is assumed to be binary
 
+    if isempty(ROI_Ind)
+        fib_index_in_ROI = false;
+        return
+    end
+
     % Trim connectome fibers
     [xvox, yvox, zvox] = ind2sub(size(ROI.img), ROI_Ind);
     ROImm = ea_vox2mm([xvox, yvox, zvox], ROI.mat);
