@@ -51,7 +51,7 @@ if isnan(color)
 end
 
 % Downsample fibers. TODO: Need further validation!
-numFiberThreshold = 1000;
+numFiberThreshold = 10000;
 if length(fibersnew) < numFiberThreshold
     idx = 1:length(fibersnew);
 else

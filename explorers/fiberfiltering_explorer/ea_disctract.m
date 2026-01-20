@@ -798,7 +798,8 @@ classdef ea_disctract < handle
             end
 
             patientsel_all = patientsel;
-            [training_all, test_all] = LOPO_JS(obj,patientsel_all);
+            %[training_all, test_all] = LOPO_JS(obj,patientsel_all);
+            [training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_all);
             NumTestSets = 19;
 
             %NumTestSets = cvp.NumTestSets;
