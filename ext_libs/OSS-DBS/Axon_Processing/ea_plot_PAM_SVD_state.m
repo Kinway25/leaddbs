@@ -1,7 +1,7 @@
 function ea_plot_PAM_SVD_state(varargin)
 
     % example 
-    % ea_plot_PAM_SVD_state('/home/interscan/Documents/data/ReFitLocaJS/derivatives/leaddbs/sub-7Fr5G1hxvcwVZLBpjt9ZdZ/stimulations/native/gs_SVD/SahinNovember2025DS_PetHDP_flipped/PAM_StimProt_right_0/sub-7Fr5G1hxvcwVZLBpjt9ZdZ_sim-fiberActivation_model-ossdbs_hemi-R.mat')
+    % ea_plot_PAM_SVD_state('/home/interscan/Documents/data/ReFitLocaJS/derivatives/leaddbs/sub-wsqwVHJahgSRPVzA3yC5rQ/stimulations/native/gs_SVD/SVD_encoded/sub-wsqwVHJahgSRPVzA3yC5rQ_sim-fiberActivation_model-ossdbs_hemi-R.mat')
 
     fiberActivationProb = varargin{1};
     load(fiberActivationProb);
@@ -62,7 +62,8 @@ function ea_plot_PAM_SVD_state(varargin)
             % PVS
             continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.1);
-            set(mytract,'FaceColor',[0 1 0],'FaceAlpha',1.0,'EdgeColor','none')            
+            %set(mytract,'FaceColor',[0 1 0],'FaceAlpha',1.0,'EdgeColor','none')      
+            set(mytract,'FaceColor',[0.7 0.7 0.0],'FaceAlpha',1.0,'EdgeColor','none')  
         elseif status(myfibs(fiber_i)) == 3
             % lacunes
             continue
@@ -72,7 +73,7 @@ function ea_plot_PAM_SVD_state(varargin)
             % WMH
             continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.1);
-            set(mytract,'FaceColor',[0.8 0.8 0.8],'FaceAlpha',1.0,'EdgeColor','none')
+            set(mytract,'FaceColor',[0.5 0.5 0.5],'FaceAlpha',1.0,'EdgeColor','none')
         elseif status(myfibs(fiber_i)) == -1 || status(myfibs(fiber_i)) == -3
             % damaged
             continue
