@@ -797,10 +797,23 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
-            patientsel_all = patientsel;
-            %[training_all, test_all] = LOPO_JS(obj,patientsel_all);
-            [training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_all);
-            NumTestSets = 19;
+            %patientsel_custom = patientsel;
+
+            % % select only patients without NaN scores
+            patientsel_custom = patientsel(~isnan(obj.responsevar));
+            patientsel = patientsel_custom;
+            % 
+            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+
+            % drop empty test folds
+            training_all(:,all(test_all==0,1)) = [];
+            test_all(:,all(test_all==0,1)) = [];
+            NumTestSets = size(test_all,2);
+
+            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
+            
+            %NumTestSets = 19;
 
             %NumTestSets = cvp.NumTestSets;
 
@@ -870,8 +883,8 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    % training = cvp.training(c);
-                    % test = cvp.test(c);
+                    % % training = cvp.training(c);
+                    % % test = cvp.test(c);
 
                     training = training_all(:,c);
                     test = test_all(:,c);
@@ -1363,6 +1376,10 @@ classdef ea_disctract < handle
 
         function draw(obj,vals,fibcell,usedidx) %for cv live visualize
             %function draw(obj,vals,fibcell)
+            
+
+            %obj.customselection = obj.patientselection(~isnan(obj.responsevar));
+            %[vals,fibcell,usedidx]=ea_discfibers_calcstats(obj,obj.customselection);
 
             % re-define plainconn (since we do not store it)
             try
