@@ -296,9 +296,16 @@ classdef ea_sweetspot < handle
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
-            [training_all, test_all] = LOPO_JS(obj,patientsel_all);
-            NumTestSets = 19;
+            patientsel_custom = patientsel(~isnan(obj.responsevar));
+            patientsel = patientsel_custom;
             % 
+            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+
+            % drop empty test folds
+            training_all(:,all(test_all==0,1)) = [];
+            test_all(:,all(test_all==0,1)) = [];
+            NumTestSets = size(test_all,2);
 
             %NumTestSets = cvp.NumTestSets;
 
@@ -318,6 +325,9 @@ classdef ea_sweetspot < handle
             % pts_numeric = [];
             % gl_counter = 1;
             % load('/home/forel/Documents/data/JB_project/JB_SW_table_18.mat')
+
+            contact_rank_corr = nan(NumTestSets,2);  % RH and LH
+
             for c=1:NumTestSets
                 if NumTestSets ~= 1
                     fprintf(['\nIterating set: %0',num2str(numel(num2str(NumTestSets))),'d/%d\n'], c, NumTestSets);
@@ -417,6 +427,29 @@ classdef ea_sweetspot < handle
                                         % Imp_separate{gl_counter,1} = pt_Imp(pt_records.hemi == 'R');
                                         % Imp_separate{gl_counter+1,1} = pt_Imp(pt_records.hemi == 'L');
                                         % gl_counter = gl_counter + 2;
+                                    
+                                        if sum(test) ~= 20 && sum(test) ~= 10
+                                            warning("Check this patient")
+                                        else
+                                            % 1. Create a logical mask for the provided indices
+                                            evaluated_electrodes = obj.M.patient.list(patientsel,1);
+                                            mask = false(size(evaluated_electrodes, 1), 1);
+                                            mask(test) = true;
+                                            
+                                            % 2. Check for the substring "_fl_" in those specific rows
+                                            % We use 'contains' and then apply the mask with a logical AND
+                                            test_lh = contains(evaluated_electrodes, "_fl_") & mask;
+                                            test_rh = ~contains(evaluated_electrodes, "_fl_") & mask;
+                                            
+                                            if sum(test_rh) ~= 0
+                                                contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,side),I(test_rh,1),'spearman');
+                                            end
+
+                                            if sum(test_lh) ~= 0
+                                                contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,side),I(test_lh,1),'spearman');
+                                            end
+                                        end
+                                        
                                     case 'sum of scores'
                                         Ihat(test,side) = ea_nansum(obj.maskvals(vals{1,side},obj.posvisible,obj.negvisible).*obj.results.efield{side}(patientsel(test),:)',1);
                                     case 'peak of scores'
@@ -428,6 +461,9 @@ classdef ea_sweetspot < handle
                     end
                 end
             end
+
+            disp("Lead-wise Ihat vs I rank corr")
+            disp(contact_rank_corr)
 
             % check if binary variable and not permutation test
            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
