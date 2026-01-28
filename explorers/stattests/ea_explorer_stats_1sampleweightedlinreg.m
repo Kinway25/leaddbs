@@ -1,20 +1,11 @@
 function varargout = ea_explorer_stats_1sampleweightedlinreg(varargin)
-% Function to estimate a certain mass univariate test (see below) as used
-% in explorer apps.
-% - Expects valsin as V x N matrix where 
-%                                   V is the number of
-%                                       voxels/streamlines/etc and 
-%                                   N is the number of 
-%                                       E-Fields/VTAs/Lesions/etc.
-% - Expects outcomein as improvement values with dimension N x 1 or 2.
-% - Expects H0 as the value to test against {'Zero','Average' or a number}
-% - Outputs valsout (test results) and psout (p-values of test results) as V x 1 or 2.
+% Function to estimate a certain mass univariate test as used in explorer apps.
 
 if nargin > 0
     % Map inputs
     valsin = varargin{1};
     outcomein = varargin{2};
-    H0 = varargin{3};
+    H0_input = varargin{3};
 else
     varargout{1}.name = "1-Sample Weighted Regression";
     varargout{1}.file = mfilename;
@@ -25,81 +16,110 @@ else
 end
 
 % Check if weights are outside the required range [0, 1]
-if any(valsin(:) < 0) || any(valsin(:) > 1)
+if any(valsin(:) < 0, 'all') || any(valsin(:) > 1, 'all')
     valsin = normalize(valsin, 'range', [0, 1]);
 end
 
-% Actual test:
-if ischar(H0)
-    switch H0
+% Resolve H0
+if ischar(H0_input)
+    switch H0_input
         case 'Average'
-            H0 = mean(outcomein, 'all', 'omitnan');
+            H0_val = mean(outcomein, 'all', 'omitnan');
         case 'Zero'
-            H0 = 0;
+            H0_val = 0;
     end
+else
+    H0_val = H0_input;
 end
-outcomein = repmat(outcomein', size(valsin, 1), 1);
-
-group1 = outcomein;
-group1(isnan(valsin)) = NaN;
-group2 = repmat(H0, size(valsin));
-group2(isnan(group1)) = NaN;
 
 % Initialize output arrays
 valsout = nan(size(valsin, 1), 1);
 psout = nan(size(valsin, 1), 1);
 
 % Check for Parallel Computing Toolbox
-if license('test', 'Distrib_Computing_Toolbox')
-    % Start parallel pool if not already started
-    if isempty(gcp('nocreate'))
-        parpool;
-    end
+if license('test', 'Distrib_Computing_Toolbox') && isempty(gcp('nocreate'))
+    parpool;
+end
 
-    % Parallel processing
+% We'll use a local variable for the outcome to avoid overhead in parfor
+local_outcome = outcomein(:)'; 
+
+ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
+
+
+if license('test', 'Distrib_Computing_Toolbox')
     parfor i = 1:size(valsin, 1)
-        % Prepare data for regression
-        Y = [group2(i, :)'; group1(i, :)'];
-        X = [ones(size(Y)), [zeros(size(valsin(i, :)')); ones(size(valsin(i, :)'))]];
-        W = [valsin(i, :)'; valsin(i, :)'];
+        % --- NaN HANDLING START ---
+        % Identify non-NaN weights for this specific voxel
+        valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
+        
+        % Subset data
+        curr_vals = valsin(i, valid_idx)';
+        curr_outcome = local_outcome(valid_idx)';
+        
+        ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
+        curr_vals = curr_vals.*ICCs;
+
+        % Degrees of freedom check: 
+        % We have 2*N observations and 2 parameters. Need 2*N - 2 > 0.
+        if sum(valid_idx) <= 1
+            continue; 
+        end
+        % --- NaN HANDLING END ---
+
+        % Prepare data (Group 2 is H0, Group 1 is the actual outcome)
+        Y = [repmat(H0_val, size(curr_outcome)); curr_outcome];
+        X = [ones(size(Y)), [zeros(size(curr_vals)); ones(size(curr_vals))]];
+        W = [curr_vals; curr_vals];
 
         % Perform weighted least squares regression
         Wsqrt = diag(sqrt(W));
         Xw = Wsqrt * X;
         Yw = Wsqrt * Y;
+        
+        % Solve and calculate stats
         b = Xw \ Yw;
+        df = size(X, 1) - size(X, 2);
         residuals = Yw - Xw * b;
-        sigma2 = (residuals' * residuals) / (size(X, 1) - size(X, 2));
-        C = sigma2 * inv(Xw' * Xw);
+        sigma2 = (residuals' * residuals) / df;
+        
+        % Using pinv for better stability with small weights
+        C = sigma2 * pinv(Xw' * Xw); 
         se = sqrt(diag(C));
 
-        % Store results
-        tStat = b(2) / se(2);  % t-statistic
+        tStat = b(2) / se(2);
         valsout(i) = tStat;
-        psout(i) = 2 * (1 - tcdf(abs(tStat), size(X, 1) - size(X, 2))); % p-value
+        psout(i) = 2 * (1 - tcdf(abs(tStat), df));
     end
 else
-    % Standard processing
+    % Standard processing (Logic identical to parfor block)
     for i = 1:size(valsin, 1)
-        % Prepare data for regression
-        Y = [group2(i, :)'; group1(i, :)'];
-        X = [ones(size(Y)), [zeros(size(valsin(i, :)')); ones(size(valsin(i, :)'))]];
-        W = [valsin(i, :)'; valsin(i, :)'];
+        valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
+        curr_vals = valsin(i, valid_idx)';
+        curr_outcome = local_outcome(valid_idx)';
 
-        % Perform weighted least squares regression
+        ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
+        curr_vals = curr_vals.*ICCs;
+        
+        if sum(valid_idx) <= 1, continue; end
+
+        Y = [repmat(H0_val, size(curr_outcome)); curr_outcome];
+        X = [ones(size(Y)), [zeros(size(curr_vals)); ones(size(curr_vals))]];
+        W = [curr_vals; curr_vals];
+
         Wsqrt = diag(sqrt(W));
         Xw = Wsqrt * X;
         Yw = Wsqrt * Y;
         b = Xw \ Yw;
+        df = size(X, 1) - size(X, 2);
         residuals = Yw - Xw * b;
-        sigma2 = (residuals' * residuals) / (size(X, 1) - size(X, 2));
-        C = sigma2 * inv(Xw' * Xw);
+        sigma2 = (residuals' * residuals) / df;
+        C = sigma2 * pinv(Xw' * Xw);
         se = sqrt(diag(C));
 
-        % Store results
-        tStat = b(2) / se(2);  % t-statistic
+        tStat = b(2) / se(2);
         valsout(i) = tStat;
-        psout(i) = 2 * (1 - tcdf(abs(tStat), size(X, 1) - size(X, 2))); % p-value
+        psout(i) = 2 * (1 - tcdf(abs(tStat), df));
     end
 end
 
