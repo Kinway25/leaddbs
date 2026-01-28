@@ -58,6 +58,7 @@ ftr = fiber_file; % just initialization
 ftr.fibers = cat(1, C{:});
 ftr.idx = cat(1, C_idx{:});
 ftr.mirrored = assume_mirrored;
+ftr.flipped_LH2RH = MAP_LH2RH;
 
 if isprop(obj.M, 'pseudoM')
     if obj.M.pseudoM == 1

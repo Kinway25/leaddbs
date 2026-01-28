@@ -1,4 +1,4 @@
-function [AllX,space]=ea_exportefieldmapping(vatlist,obj)
+function [AllX,space]=ea_exportefieldmapping_till(vatlist,obj)
 EFthresh = 50;
 templateresolution = .5;
 if size(vatlist,2)>1

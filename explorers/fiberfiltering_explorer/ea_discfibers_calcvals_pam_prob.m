@@ -159,10 +159,15 @@ for side = 1:numSide
         activated = find(fib_state >= 0.05);     % use low threshold when doing pPAM
         %activated = find(fib_state >= 0.5);    % maybe use higher threshold when doing binary tests
 
-        % needed
-        % Generate binary fibsval for the T-test method
-        fibsvalBin{side}(activated, pt)=1;
-        fibsvalProb{side}(activated, pt)=fib_state(activated);
+        if  side==2 && isfield(ftr,'flipped_LH2RH') && ftr.flipped_LH2RH
+            % assigm to RH, test!
+            fibsvalBin{1}(activated, pt)=1;
+            fibsvalProb{1}(activated, pt)=fib_state(activated);
+        else
+            % Generate binary fibsval for the T-test method
+            fibsvalBin{side}(activated, pt)=1;
+            fibsvalProb{side}(activated, pt)=fib_state(activated);
+        end
 
     end
 
@@ -179,4 +184,5 @@ for side = 1:numSide
     connFiberInd{side} = find(fibIsConnected);
     connFiber = fibers(ismember(fibers(:,4), connFiberInd{side}), 1:3);
     fibcell{side} = mat2cell(connFiber, idx(connFiberInd{side}));
+
 end

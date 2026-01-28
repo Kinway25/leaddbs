@@ -288,7 +288,8 @@ classdef ea_disctract < handle
             if isfield(obj.M,'pseudoM') % failsave - this should not be necessary but still making sure things are set correctly for the pseudoM case.
                 if isfield(obj.M,'StimSets_PAM')
                     obj.connectivity_type=2;
-                    obj.calculationMethod='Fiber Based Method';                    
+                    obj.calculationMethod='Fiber Based Method';
+                    %obj.flipped_LH2RH = true; % custom parameter!
                 else
                     obj.connectivity_type=1;
                     obj.calculationMethod='E-field/Voxel Based Method';
@@ -797,25 +798,25 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
-            %patientsel_custom = patientsel;
-
-            % % select only patients without NaN scores
-            patientsel_custom = patientsel(~isnan(obj.responsevar));
-            patientsel = patientsel_custom;
+            % %patientsel_custom = patientsel;
             % 
-            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
-            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+            % % % select only patients without NaN scores
+            % patientsel_custom = patientsel(~isnan(obj.responsevar));
+            % patientsel = patientsel_custom;
+            % % 
+            % [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            % %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+            % 
+            % % drop empty test folds
+            % training_all(:,all(test_all==0,1)) = [];
+            % test_all(:,all(test_all==0,1)) = [];
+            % NumTestSets = size(test_all,2);
+            % 
+            % %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
+            % 
+            % %NumTestSets = 19;
 
-            % drop empty test folds
-            training_all(:,all(test_all==0,1)) = [];
-            test_all(:,all(test_all==0,1)) = [];
-            NumTestSets = size(test_all,2);
-
-            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
-            
-            %NumTestSets = 19;
-
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -875,6 +876,9 @@ classdef ea_disctract < handle
                 obj.adj_scaler = 0.0;
             end
             obj.adj_scaler = 0.0;
+
+            contact_rank_corr = nan(NumTestSets,2);  % RH and LH         
+
             for c=1:NumTestSets
                 if NumTestSets ~= 1
                     if ~silent
@@ -883,11 +887,11 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    % % training = cvp.training(c);
-                    % % test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -948,7 +952,36 @@ classdef ea_disctract < handle
                     Predicted_scores(test) = Ihat_voters_prediction(1:end,1); % only one value here atm
                 end
 
+                % if sum(test) ~= 20 && sum(test) ~= 10
+                %     warning("Check this patient")
+                %     continue
+                % else
+                %     % 1. Create a logical mask for the provided indices
+                %     evaluated_electrodes = obj.M.patient.list(patientsel,1);
+                %     mask = false(size(evaluated_electrodes, 1), 1);
+                %     mask(test) = true;
+                % 
+                %     % 2. Check for the substring "_fl_" in those specific rows
+                %     % We use 'contains' and then apply the mask with a logical AND
+                % 
+                %     %test_lh = contains(evaluated_electrodes, "_left_") & mask;
+                %     %test_rh = ~contains(evaluated_electrodes, "_left_") & mask;
+                % 
+                %     test_lh = contains(evaluated_electrodes, "_fl_") & mask;
+                %     test_rh = ~contains(evaluated_electrodes, "_fl_") & mask;
+                % 
+                %     if sum(test_rh) ~= 0
+                %         contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,1),Improvement(test_rh,1),'spearman');
+                %     end
+                % 
+                %     if sum(test_lh) ~= 0
+                %         contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,1),Improvement(test_lh,1),'spearman');
+                %     end
+                % end
             end
+
+            disp("Lead-wise Ihat vs I rank corr")
+            disp(contact_rank_corr)
 
             % check if binary variable and not permutation test
             if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1

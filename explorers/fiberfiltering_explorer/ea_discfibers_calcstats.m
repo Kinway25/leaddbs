@@ -28,6 +28,16 @@ switch obj.statsettings.stimulationmodel
         fibsval = cellfun(@full, obj.results.(ea_conn2connid(obj.connectome)).(ea_method2methodid(obj)).fibsval, 'Uni', 0);
 end
 
+flipped_LH2RH = false;
+if flipped_LH2RH
+    if any(fibsval{1,1}(:) & fibsval{1,2}(:))
+        ea_warndlg("Overlap in fibsvals, merge is not possible")
+    else
+        fibsval{1,1} = fibsval{1,1} + fibsval{1,2};
+        fibsval{1,2} = fibsval{1,1};
+    end
+end
+
 if size(I,2)==1 % 1 entry per patient, not per electrode
     I=[I,I]; % both sides the same;
 end
