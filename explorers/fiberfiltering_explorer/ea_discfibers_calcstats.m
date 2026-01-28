@@ -28,6 +28,14 @@ switch obj.statsettings.stimulationmodel
         fibsval = cellfun(@full, obj.results.(ea_conn2connid(obj.connectome)).(ea_method2methodid(obj)).fibsval, 'Uni', 0);
 end
 
+ICC_weighting = true;
+if ICC_weighting 
+    ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
+    ICCs = ICC_table.ICC_a_hemisphere;
+    fibsval_nonW = fibsval;
+    fibsval{1,1} = fibsval{1,1}.*ICCs';
+end
+
 flipped_LH2RH = false;
 if flipped_LH2RH
     if any(fibsval{1,1}(:) & fibsval{1,2}(:))
@@ -205,7 +213,11 @@ for group=groups
 %                         Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
 %                     end
                 case 'Sigmoid Field'
-                    Nmap=ea_nansum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
+                    if ICC_weighting
+                        Nmap=ea_nansum((fibsval_nonW{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
+                    else
+                        Nmap=ea_nansum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
+                    end
                 case 'Electric Field'
                     Nmap=ea_nansum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
             end

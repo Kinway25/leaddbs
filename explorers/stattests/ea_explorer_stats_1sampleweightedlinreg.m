@@ -44,7 +44,7 @@ end
 % We'll use a local variable for the outcome to avoid overhead in parfor
 local_outcome = outcomein(:)'; 
 
-ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
+%ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
 
 
 if license('test', 'Distrib_Computing_Toolbox')
@@ -57,8 +57,8 @@ if license('test', 'Distrib_Computing_Toolbox')
         curr_vals = valsin(i, valid_idx)';
         curr_outcome = local_outcome(valid_idx)';
         
-        ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
-        curr_vals = curr_vals.*ICCs;
+        %ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
+        %curr_vals = curr_vals.*ICCs;
 
         % Degrees of freedom check: 
         % We have 2*N observations and 2 parameters. Need 2*N - 2 > 0.
@@ -98,9 +98,9 @@ else
         curr_vals = valsin(i, valid_idx)';
         curr_outcome = local_outcome(valid_idx)';
 
-        ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
-        curr_vals = curr_vals.*ICCs;
-        
+        % ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
+        % curr_vals = curr_vals.*ICCs;
+        % 
         if sum(valid_idx) <= 1, continue; end
 
         Y = [repmat(H0_val, size(curr_outcome)); curr_outcome];
