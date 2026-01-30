@@ -800,23 +800,23 @@ classdef ea_disctract < handle
 
             %patientsel_custom = patientsel;
 
-            % % select only patients without NaN scores
-            patientsel_custom = patientsel(~isnan(obj.responsevar));
-            patientsel = patientsel_custom;
+            % % % select only patients without NaN scores
+            % patientsel_custom = patientsel(~isnan(obj.responsevar));
+            % patientsel = patientsel_custom;
+            % % 
+            % %[training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            % [training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
             % 
-            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
-            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+            % % drop empty test folds
+            % training_all(:,all(test_all==0,1)) = [];
+            % test_all(:,all(test_all==0,1)) = [];
+            % NumTestSets = size(test_all,2);
+            % 
+            % %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
+            % 
+            % %NumTestSets = 19;
 
-            % drop empty test folds
-            training_all(:,all(test_all==0,1)) = [];
-            test_all(:,all(test_all==0,1)) = [];
-            NumTestSets = size(test_all,2);
-
-            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
-
-            %NumTestSets = 19;
-
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -887,11 +887,11 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    % training = cvp.training(c);
-                    % test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -952,32 +952,35 @@ classdef ea_disctract < handle
                     Predicted_scores(test) = Ihat_voters_prediction(1:end,1); % only one value here atm
                 end
 
-                if sum(test) ~= 20 && sum(test) ~= 10
-                    warning("Check this patient")
-                    continue
-                else
-                    % 1. Create a logical mask for the provided indices
-                    evaluated_electrodes = obj.M.patient.list(patientsel,1);
-                    mask = false(size(evaluated_electrodes, 1), 1);
-                    mask(test) = true;
-
-                    % 2. Check for the substring "_fl_" in those specific rows
-                    % We use 'contains' and then apply the mask with a logical AND
-
-                    %test_lh = contains(evaluated_electrodes, "_left_") & mask;
-                    %test_rh = ~contains(evaluated_electrodes, "_left_") & mask;
-
-                    test_lh = contains(evaluated_electrodes, "_fl_") & mask;
-                    test_rh = ~contains(evaluated_electrodes, "_fl_") & mask;
-
-                    if sum(test_rh) ~= 0
-                        contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,1),Improvement(test_rh,1),'spearman');
-                    end
-
-                    if sum(test_lh) ~= 0
-                        contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,1),Improvement(test_lh,1),'spearman');
-                    end
-                end
+                % if sum(test) ~= 20 && sum(test) ~= 10
+                %     warning("Check this patient")
+                %     continue
+                % else
+                %     % 1. Create a logical mask for the provided indices
+                %     evaluated_electrodes = obj.M.patient.list(patientsel,1);
+                %     mask = false(size(evaluated_electrodes, 1), 1);
+                %     mask(test) = true;
+                % 
+                %     % 2. Check for the substring "_fl_" in those specific rows
+                %     % We use 'contains' and then apply the mask with a logical AND
+                % 
+                %     test_lh = contains(evaluated_electrodes, "_left_") & mask;
+                %     test_rh = ~contains(evaluated_electrodes, "_left_") & mask;
+                % 
+                %     %test_lh = contains(evaluated_electrodes, "_fl_") & mask;
+                %     %test_rh = ~contains(evaluated_electrodes, "_fl_") & mask;
+                % 
+                %     %test_lh = contains(evaluated_electrodes, "_fl") & mask;
+                %     %test_rh = ~contains(evaluated_electrodes, "_fl") & mask;
+                % 
+                %     if sum(test_rh) ~= 0
+                %         contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,1),Improvement(test_rh,1),'spearman');
+                %     end
+                % 
+                %     if sum(test_lh) ~= 0
+                %         contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,1),Improvement(test_lh,1),'spearman');
+                %     end
+                % end
             end
 
             disp("Lead-wise Ihat vs I rank corr")
@@ -1410,6 +1413,7 @@ classdef ea_disctract < handle
         function draw(obj,vals,fibcell,usedidx) %for cv live visualize
             %function draw(obj,vals,fibcell)
             
+            %obj.statsettings.efieldthreshold = 0.98;
 
             %obj.customselection = obj.patientselection(~isnan(obj.responsevar));
             %[vals,fibcell,usedidx]=ea_discfibers_calcstats(obj,obj.customselection);
@@ -1455,7 +1459,7 @@ classdef ea_disctract < handle
                 obj.results.(ea_conn2connid(obj.connectome)).totalFibers = length(idx);
 
                 try
-                    for side = 1:2
+                    for side = 1:size(obj.results.(ea_conn2connid(obj.connectome)).fibcell,2)
                         if obj.connectivity_type == 2
                             connFiber = fibers(ismember(fibers(:,4), obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}), 1:3);
                             obj.results.(ea_conn2connid(obj.connectome)).fibcell{side} = mat2cell(connFiber, idx(obj.results.(ea_conn2connid(obj.connectome)).connFiberInd_PAM{side}));

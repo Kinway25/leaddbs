@@ -616,7 +616,7 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
                 useI=obj.responsevar;
         end
         for side=1:2
-            mdl=fitglm(Ihat_train_global(numTestIt,training,side,voter),useI(training),lower(obj.predictionmodel));
+            mdl=fitglm(Ihat_train_global(numTestIt,training,side,voter),useI(patientsel(training)),lower(obj.predictionmodel));
             actualimprovs{voter,side}=predict(mdl,Ihat(test,side,voter));
         end
     end

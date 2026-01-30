@@ -80,8 +80,8 @@ else
         h=ea_corrbox(I(~isnan(Ihat)),Ihat(~isnan(Ihat)),pperm,{title,empiricallabel,fibscorelabel},groupID(~isnan(Ihat)),[],groupColors);
     else
         ICC_weighting = false;
-        idx_nnan_stims = tractset.patientselection(~isnan(tractset.responsevar))';
         if ICC_weighting 
+            idx_nnan_stims = tractset.patientselection(~isnan(tractset.responsevar))';
             ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
             if strcmp(tractset.responsevarlabel,'rig_perc_impr')
                 ICCs = ICC_table.ICC_r_hemisphere(idx_nnan_stims,1);
