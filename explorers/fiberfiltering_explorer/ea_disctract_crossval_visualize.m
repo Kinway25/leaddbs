@@ -79,7 +79,25 @@ else
     if exist('pperm', 'var')
         h=ea_corrbox(I(~isnan(Ihat)),Ihat(~isnan(Ihat)),pperm,{title,empiricallabel,fibscorelabel},groupID(~isnan(Ihat)),[],groupColors);
     else
-        h=ea_corrbox(I(~isnan(Ihat)),Ihat(~isnan(Ihat)),'permutation',{title,empiricallabel,fibscorelabel},groupID(~isnan(Ihat)),[],groupColors);
+        ICC_weighting = false;
+        idx_nnan_stims = tractset.patientselection(~isnan(tractset.responsevar))';
+        if ICC_weighting 
+            ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
+            if strcmp(tractset.responsevarlabel,'rig_perc_impr')
+                ICCs = ICC_table.ICC_r_hemisphere(idx_nnan_stims,1);
+            elseif strcmp(tractset.responsevarlabel,'ak_perc_impr')
+                ICCs = ICC_table.ICC_a_hemisphere(idx_nnan_stims,1);
+            elseif strcmp(tractset.responsevarlabel,'tremor_perc_impr')
+                ICCs = ICC_table.ICC_tr_hemisphere(idx_nnan_stims,1);
+            else
+                ICCs = ICC_table.ICC_all_hemisphere(idx_nnan_stims,1);
+            end
+            ICCs(ICCs<0) = 0;
+
+            ea_corrplot_ICC(Ihat(~isnan(Ihat)),I(~isnan(Ihat)),ICCs(~isnan(Ihat)),'Ihat',tractset.responsevarlabel)
+        else    
+            h=ea_corrbox(I(~isnan(Ihat)),Ihat(~isnan(Ihat)),'permutation',{title,empiricallabel,fibscorelabel},groupID(~isnan(Ihat)),[],groupColors);
+        end
     end
     assignin('base','Empirical',I);
     assignin('base','Estimate',Ihat);

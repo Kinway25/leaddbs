@@ -16,7 +16,13 @@ else
     numPatient = length(obj.allpatients);  % no mirroring
 end
 
-numSide = 2; % hardcoded for now (as in ...getvats.m)
+ftr.flipped_LH2RH = false;
+if ftr.flipped_LH2RH
+    numSide = 1;
+    numPatient = length(obj.allpatients);  % no mirroring
+else
+    numSide = 2; % hardcoded for now (as in ...getvats.m)
+end
 
 fibsvalBin = cell(1, numSide);
 fibsvalProb = cell(1, numSide);
@@ -38,13 +44,17 @@ for side = 1:numSide
 
     disp(['Calculate for side ', num2str(side), ':']);
     for pt = 1:numPatient
- 
+
         if obj.multi_pathways == 1 % fiberActivation_side.mat already contains all fibers (incl. filtered out by Kuncel-VTA)
 
             % for mirrored patients, we will find a counterpart fibers in
             % another hemisphere
 
-            if strcmp(char(pamlist(pt,side)), 'skip')
+            if ftr.flipped_LH2RH && strcmp(char(pamlist(pt,side)), 'skip')
+                % load LH file (but the fiber status here is already
+                % flipped)
+                fib_state_raw = load(char(pamlist(pt,2)));
+            elseif strcmp(char(pamlist(pt,side)), 'skip')
                 % no stimulation for this hemisphere
                 continue
             else
@@ -159,15 +169,9 @@ for side = 1:numSide
         activated = find(fib_state >= 0.05);     % use low threshold when doing pPAM
         %activated = find(fib_state >= 0.5);    % maybe use higher threshold when doing binary tests
 
-        if  side==2 && isfield(ftr,'flipped_LH2RH') && ftr.flipped_LH2RH
-            % assigm to RH, test!
-            fibsvalBin{1}(activated, pt)=1;
-            fibsvalProb{1}(activated, pt)=fib_state(activated);
-        else
-            % Generate binary fibsval for the T-test method
-            fibsvalBin{side}(activated, pt)=1;
-            fibsvalProb{side}(activated, pt)=fib_state(activated);
-        end
+        % Generate binary fibsval for the T-test method
+        fibsvalBin{side}(activated, pt)=1;
+        fibsvalProb{side}(activated, pt)=fib_state(activated);
 
     end
 
