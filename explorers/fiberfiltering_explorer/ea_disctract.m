@@ -1413,7 +1413,7 @@ classdef ea_disctract < handle
         function draw(obj,vals,fibcell,usedidx) %for cv live visualize
             %function draw(obj,vals,fibcell)
             
-            %obj.statsettings.efieldthreshold = 0.98;
+            %obj.statsettings.efieldthreshold = 0.9;
 
             %obj.customselection = obj.patientselection(~isnan(obj.responsevar));
             %[vals,fibcell,usedidx]=ea_discfibers_calcstats(obj,obj.customselection);

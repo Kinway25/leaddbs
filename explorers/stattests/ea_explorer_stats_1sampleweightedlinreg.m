@@ -49,75 +49,95 @@ local_outcome = outcomein(:)';
 
 if license('test', 'Distrib_Computing_Toolbox')
     parfor i = 1:size(valsin, 1)
-        % --- NaN HANDLING START ---
-        % Identify non-NaN weights for this specific voxel
+        % --- NaN HANDLING ---
         valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
+        curr_vals = valsin(i, valid_idx)'; % These are our Weights (W)
+        curr_outcome = local_outcome(valid_idx)'; % This is our Data (Y)
         
-        % Subset data
-        curr_vals = valsin(i, valid_idx)';
-        curr_outcome = local_outcome(valid_idx)';
-        
-        %ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
-        %curr_vals = curr_vals.*ICCs;
-
-        % Degrees of freedom check: 
-        % We have 2*N observations and 2 parameters. Need 2*N - 2 > 0.
-        if sum(valid_idx) <= 1
+        N_valid = sum(valid_idx);
+        if N_valid <= 1
             continue; 
         end
-        % --- NaN HANDLING END ---
-
-        % Prepare data (Group 2 is H0, Group 1 is the actual outcome)
-        Y = [repmat(H0_val, size(curr_outcome)); curr_outcome];
-        X = [ones(size(Y)), [zeros(size(curr_vals)); ones(size(curr_vals))]];
-        W = [curr_vals; curr_vals];
-
-        % Perform weighted least squares regression
-        Wsqrt = diag(sqrt(W));
-        Xw = Wsqrt * X;
-        Yw = Wsqrt * Y;
         
-        % Solve and calculate stats
-        b = Xw \ Yw;
-        df = size(X, 1) - size(X, 2);
+        % --- STATISTICAL CORRECTION ---
+        % 1. Center the outcome around the Null Hypothesis
+        Y = curr_outcome - H0_val;
+        
+        % 2. Predictor is just a constant (intercept) for 1-sample test
+        X = ones(N_valid, 1);
+        
+        % 3. Apply weights
+        W = curr_vals;
+        Wsqrt = sqrt(W); % Using element-wise sqrt since W is a vector here
+        Xw = X .* Wsqrt; 
+        Yw = Y .* Wsqrt;
+        
+        % 4. Weighted Least Squares Solve
+        b = Xw \ Yw; % This is the weighted mean difference from H0
+        
+        % 5. Degrees of Freedom (Corrected: N - 1)
+        df = N_valid - 1;
+        
+        % 6. Standard Error Calculation
         residuals = Yw - Xw * b;
         sigma2 = (residuals' * residuals) / df;
         
-        % Using pinv for better stability with small weights
-        C = sigma2 * pinv(Xw' * Xw); 
-        se = sqrt(diag(C));
-
-        tStat = b(2) / se(2);
+        % Standard error of the weighted mean
+        % se = sqrt(sigma2 * inv(Xw' * Xw))
+        se = sqrt(sigma2 / (Xw' * Xw)); 
+        
+        % 7. Statistics
+        tStat = full(b / se);
         valsout(i) = tStat;
         psout(i) = 2 * (1 - tcdf(abs(tStat), df));
     end
 else
     % Standard processing (Logic identical to parfor block)
     for i = 1:size(valsin, 1)
+        % --- NaN HANDLING ---
         valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
-        curr_vals = valsin(i, valid_idx)';
-        curr_outcome = local_outcome(valid_idx)';
 
-        % ICCs = ICC_table.ICC_a_hemisphere(valid_idx);
-        % curr_vals = curr_vals.*ICCs;
-        % 
-        if sum(valid_idx) <= 1, continue; end
+        % if full(sum(valid_idx)) ~= size(valsin,2)
+        %     disp("NaNs detected")
+        % end
 
-        Y = [repmat(H0_val, size(curr_outcome)); curr_outcome];
-        X = [ones(size(Y)), [zeros(size(curr_vals)); ones(size(curr_vals))]];
-        W = [curr_vals; curr_vals];
-
-        Wsqrt = diag(sqrt(W));
-        Xw = Wsqrt * X;
-        Yw = Wsqrt * Y;
-        b = Xw \ Yw;
-        df = size(X, 1) - size(X, 2);
+        curr_vals = valsin(i, valid_idx)'; % These are our Weights (W)
+        curr_outcome = local_outcome(valid_idx)'; % This is our Data (Y)
+        
+        N_valid = sum(valid_idx);
+        if N_valid <= 1
+            continue; 
+        end
+        
+        % --- STATISTICAL CORRECTION ---
+        % 1. Center the outcome around the Null Hypothesis
+        Y = curr_outcome - H0_val;
+        
+        % 2. Predictor is just a constant (intercept) for 1-sample test
+        X = ones(N_valid, 1);
+        
+        % 3. Apply weights
+        W = curr_vals;
+        Wsqrt = sqrt(W); % Using element-wise sqrt since W is a vector here
+        Xw = X .* Wsqrt; 
+        Yw = Y .* Wsqrt;
+        
+        % 4. Weighted Least Squares Solve
+        b = Xw \ Yw; % This is the weighted mean difference from H0
+        
+        % 5. Degrees of Freedom (Corrected: N - 1)
+        df = N_valid - 1;
+        
+        % 6. Standard Error Calculation
         residuals = Yw - Xw * b;
         sigma2 = (residuals' * residuals) / df;
-        C = sigma2 * pinv(Xw' * Xw);
-        se = sqrt(diag(C));
-
-        tStat = b(2) / se(2);
+        
+        % Standard error of the weighted mean
+        % se = sqrt(sigma2 * inv(Xw' * Xw))
+        se = sqrt(sigma2 / (Xw' * Xw)); 
+        
+        % 7. Statistics
+        tStat = full(b / se);
         valsout(i) = tStat;
         psout(i) = 2 * (1 - tcdf(abs(tStat), df));
     end

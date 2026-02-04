@@ -213,7 +213,7 @@ for group=groups
 %                         Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
 %                     end
                 case 'Sigmoid Field'
-                    %obj.statsettings.efieldthreshold = 0.98;
+                    %obj.statsettings.efieldthreshold = 0.9;
                     if ICC_weighting
                         Nmap=ea_nansum((fibsval_nonW{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
                     else
