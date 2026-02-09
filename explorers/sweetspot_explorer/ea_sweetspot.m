@@ -430,6 +430,7 @@ classdef ea_sweetspot < handle
                                     
                                         if sum(test) ~= 20 && sum(test) ~= 10
                                             warning("Check this patient")
+                                            continue
                                         else
                                             % 1. Create a logical mask for the provided indices
                                             evaluated_electrodes = obj.M.patient.list(patientsel,1);
@@ -462,8 +463,8 @@ classdef ea_sweetspot < handle
                 end
             end
 
-            disp("Lead-wise Ihat vs I rank corr")
-            disp(contact_rank_corr)
+
+        end
 
             % check if binary variable and not permutation test
            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
