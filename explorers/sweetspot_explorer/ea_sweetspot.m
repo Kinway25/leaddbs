@@ -463,9 +463,6 @@ classdef ea_sweetspot < handle
                 end
             end
 
-
-        end
-
             % check if binary variable and not permutation test
            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
                 % average across sides. This might be wrong for capsular response.

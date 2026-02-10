@@ -312,6 +312,7 @@ for group=groups
                         vals{group,side}(~nanidx)=R;
                     case 'Reverse T-Tests (Binary Var)'
 
+                        % actually a weighted one-sample T-test
                         thisvals=gval{side}(gpatsel,:);
                         thatvals = nan(size(thisvals));
                         thatvals(thisvals>=350.0) = thisvals(thisvals>=350.0);
@@ -322,37 +323,69 @@ for group=groups
                         thisvals = ea_SigmoidFromEfield(thisvals);
                         thisvals(isnan(thisvals)) = 0.0;
 
-                        nonempty=sum(thisvals(:,:),1)>0; % number of connected tracts
+                        nonempty=sum(thisvals(:,:),1)>0; % number of connected voxels
                         invals=thisvals(:,nonempty);
-    
-                        if ~isempty(invals)
-                        
-                            Impr = I(gpatsel,side);
-    
-                            if any(isnan(I(gpatsel,side)))
-                                ea_warndlg("NaNs in scores detected, removing...")
-                                %return
-                                % remove the whole row
-                                nan_scores = isnan(I(gpatsel,side));
-                                
-                                Impr(nan_scores,:) = [];
-                                invals(nan_scores,:) = [];
-                            end
-    
-                            ImpBinary=logical((Impr)>0); % make sure variable is actually binary
-                            % restore nans
-    
-                            [outvals,CI95_up,CI95_low,outps] = ea_discfibers_odds_ratios(invals,ImpBinary);
-                 
-                            %
-                            if obj.showsignificantonly % only calculated if testing for significance.
-                                %pvals{group,side}(nonempty)=outps;
-                                outvals=ea_corrsignan(outvals,outps,obj);
-                            end 
-                            %vals{group,side}(nonempty)=outvals;
-                            vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
-                            vals{group,side}(~nanidx)=outvals;
-                        end
+
+                        [outvals,outps] = ea_explorer_stats_1sampleweightedlinreg(invals',I(gpatsel,side),'Average'); % generate optimality values on all but left out patients
+
+                        % vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
+                        % vals{group,side}(~nanidx)=outvals;
+                        % if exist('outps','var') % only calculated if testing for significance.
+                        %     pvals{group,side}(nonempty)=outps;
+                        % end
+
+                        % Odds Ratio
+                        % thisvals=gval{side}(gpatsel,:);
+                        % thatvals = nan(size(thisvals));
+                        % thatvals(thisvals>=350.0) = thisvals(thisvals>=350.0);
+                        % Nmap=ea_nansum(~isnan(thatvals));
+                        % nanidx=Nmap<round(size(thisvals,1)*(obj.coverthreshold/100));
+                        % thisvals=thisvals(:,~nanidx);
+                        % 
+                        % thisvals = ea_SigmoidFromEfield(thisvals);
+                        % thisvals(isnan(thisvals)) = 0.0;
+                        % 
+                        % nonempty=sum(thisvals(:,:),1)>0; % number of connected tracts
+                        % invals=thisvals(:,nonempty);
+                        % 
+                        % if ~isempty(invals)
+                        % 
+                        %     Impr = I(gpatsel,side);
+                        % 
+                        %     if any(isnan(I(gpatsel,side)))
+                        %         ea_warndlg("NaNs in scores detected, removing...")
+                        %         %return
+                        %         % remove the whole row
+                        %         nan_scores = isnan(I(gpatsel,side));
+                        % 
+                        %         Impr(nan_scores,:) = [];
+                        %         invals(nan_scores,:) = [];
+                        %     end
+                        % 
+                        %     ImpBinary=logical((Impr)>0); % make sure variable is actually binary
+                        %     % restore nans
+                        % 
+                        %     [outvals,CI95_up,CI95_low,outps] = ea_discfibers_odds_ratios(invals,ImpBinary);
+                        % 
+                        %     %
+
+
+                        %     if obj.showsignificantonly % only calculated if testing for significance.
+                        %         %pvals{group,side}(nonempty)=outps;
+                        %         outvals=ea_corrsignan(outvals,outps,obj);
+                        %     end 
+                        %     %vals{group,side}(nonempty)=outvals;
+                        %     vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
+                        %     vals{group,side}(~nanidx)=outvals;
+                        % end
+
+                        if obj.showsignificantonly % only calculated if testing for significance.
+                            %pvals{group,side}(nonempty)=outps;
+                            outvals=ea_corrsignan(outvals,outps,obj);
+                        end 
+                        %vals{group,side}(nonempty)=outvals;
+                        vals{group,side}=nan(size(gval{side}(gpatsel,:),2),1);
+                        vals{group,side}(~nanidx)=outvals;
                 end
         end
     end
