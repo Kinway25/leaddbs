@@ -45,7 +45,6 @@ else
     
     %mdl = fitglm(Ihat_train_balanced,Improvement_balanced ,'Distribution','binomial','Link','logit');
     
-    
     % second, we run ROC curve analysis
     scores = mdl.Fitted.Probability;
     [X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);

@@ -426,8 +426,44 @@ classdef ea_sweetspot < handle
                 end
             end
 
+            % % special use case
+            % % predict binary event and do unpaired T-test for the outcome
+            % Ihat_av_sides = ea_nanmean(Ihat,2);
+            % scores_test = predict(S.mdl,Ihat_av_sides(test));
+            % Ihat_prediction = scores_test > S.scores_thresh;
+            % 
+            % Ihat_prediction_with_scores = Ihat_prediction(~isnan(I));
+            % I_nnan = I(~isnan(I));
+            % %[h,p] = ttest2(I(Ihat_prediction_with_scores),I(~Ihat_prediction_with_scores));
+            % 
+            % groupA = I(Ihat_prediction_with_scores);
+            % groupB = I(~Ihat_prediction_with_scores);
+            % 
+            % [h, p, ci, stats] = ttest2(groupA, groupB, 'Tail', 'right');
+            % 
+            % % 3. Display Results
+            % fprintf('--- One-Sided T-Test Results (A > B) ---\n');
+            % fprintf('T-statistic: %.4f\n', stats.tstat);
+            % fprintf('P-value:     %.4f\n', p);
+            % 
+            % if h == 1
+            %     fprintf('Result: Reject Null. Evidence suggests Group A > Group B.\n');
+            % else
+            %     fprintf('Result: Fail to reject Null. No evidence that Group A > Group B.\n');
+            % end
+            % 
+            % % 4. Visualization
+            % figure('Color', 'w');
+            % groupLabels = [repmat({'Pred. Entrain.'}, length(groupA), 1); ...
+            %                repmat({'No Pred. Entrain.'}, length(groupB), 1)];
+            % 
+            % boxplot([groupA; groupB], groupLabels);
+            % ylabel('Rigidity Improvement, %');
+            % title(['Right-Tailed T-Test (p = ', num2str(p, '%.4f'), ')']);
+
+
             % check if binary variable and not permutation test
-           if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
+            if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(I(:,1), [0,1]))
                 % average across sides. This might be wrong for capsular response.
                 Ihat_av_sides = ea_nanmean(Ihat,2);
 
