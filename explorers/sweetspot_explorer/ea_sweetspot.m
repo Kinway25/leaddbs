@@ -559,7 +559,6 @@ classdef ea_sweetspot < handle
                         Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
                         AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
                     end
-                   
                 end
             end
 

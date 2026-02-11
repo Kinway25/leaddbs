@@ -121,4 +121,50 @@ precision = tp/(tp + fp);
 f1 = 2*sensitivity*precision/(sensitivity+precision);
 
 cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity), '; ', 'F1: ', sprintf('%.2f',f1)];
+
+
+if (size(Improvement(test),1) == sum(Improvement(test))*2) || size(Improvement(test),1)==131
+    % likely predicting a shell, do binomial test
+
+    % Binomial test across the threshold
+    % bad practice!
+    
+    % stupid way to define it
+    n_trials = size(Improvement(test),1);
+    k_successes = sum((Ihat_prediction & Improvement(test)) | (~Ihat_prediction & ~Improvement(test)));
+    
+    p_chance = 0.5;          % Probability of success by chance (0.5 for binary)
+    alpha = 0.05;            % Significance level
+    
+    % 2. Calculate the p-value
+    % We use 'upper' because we want to know if accuracy is GREATER than chance.
+    % We subtract 1 from k because binocdf(k, n, p, 'upper') calculates P(X > k).
+    % To get P(X >= k), we need P(X > k-1).
+    p_value = binocdf(k_successes - 1, n_trials, p_chance, 'upper');
+    
+    % 3. Display results
+    fprintf('--- Binomial Test Results ---\n');
+    fprintf('Accuracy: %.2f%%\n', (k_successes/n_trials)*100);
+    fprintf('p-value:  %.4f\n', p_value);
+    
+    if p_value < alpha
+        fprintf('Result: Significant! (Reject Null Hypothesis)\n');
+    else
+        fprintf('Result: Not significant. (Fail to reject Null Hypothesis)\n');
+    end
+    
+    % 4. Optional: Visualize the Null Distribution
+    figure
+    x = 0:n_trials;
+    y = binopdf(x, n_trials, p_chance);
+    bar(x, y, 'FaceColor', [0.8 0.8 0.8], 'EdgeColor', 'none');
+    hold on;
+    stem(k_successes, binopdf(k_successes, n_trials, p_chance), 'r', 'LineWidth', 2);
+    title('Binomial Distribution (Null Hypothesis)');
+    xlabel('Number of Correct Predictions');
+    ylabel('Probability');
+    legend('Chance Distribution', 'Your Model');
+    grid on;
+end
+
 end
