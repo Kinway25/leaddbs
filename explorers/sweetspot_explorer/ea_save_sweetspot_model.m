@@ -5,7 +5,7 @@ function ea_save_sweetspot_model(obj, ExternalModelFile)
     % we want to define the model outside of cross-validation
     if ~exist('patsel','var') % patsel can be supplied directly (in this case, obj.patientselection is ignored), e.g. for cross-validations.
         patientsel = obj.patientselection;
-%         obj.customselection=obj.patientselection;
+        obj.customselection=obj.patientselection;
     end
 
     % get the selected netmap model (vals) and corresponding indices (usedidx)
@@ -29,17 +29,40 @@ function ea_save_sweetspot_model(obj, ExternalModelFile)
     Improvement = obj.responsevar(patientsel,:);
     [~, Ihat] = crossval(obj, cvp);
     predictor=squeeze(ea_nanmean(Ihat,2));
-    mdl=fitglm(predictor(training),Improvement(training),'linear');
-    Intercept = mdl.Coefficients.Estimate(1);
-    Slope = mdl.Coefficients.Estimate(2);
-    plotName = 'Fitting of a linear model for the stored Network Model';
-    empiricallabel = 'Variable of Intrest';
-    pred_label = 'Network (Ihat) score';
-    LM_values_slope = ['Slope: ' num2str(Slope)];
-    LM_values_intercept = ['Intercept: ' num2str(Intercept)];
+
+    if all(ismember(Improvement(:,1), [0,1]))
+        % first, we fit a logit function for our binary prediction
+        mdl = fitglm(Ihat(training),Improvement(training),'Distribution','binomial','Link','logit');
+        
+        % second, we run ROC curve analysis
+        scores = mdl.Fitted.Probability;
+        [X,Y,T,AUC,OPTROCPT] = perfcurve(Improvement(training),scores,1);
+        % optimal threshold on the classifier
+        scores_thresh = T((X==OPTROCPT(1))&(Y==OPTROCPT(2)));
+        %scores_thresh = 0.5;
+        ss.scores_thresh = scores_thresh;
+    else
+
+        mdl=fitglm(predictor(training),Improvement(training),'linear');
+        Intercept = mdl.Coefficients.Estimate(1);
+        Slope = mdl.Coefficients.Estimate(2);
+        plotName = 'Fitting of a linear model for the stored Network Model';
+        empiricallabel = 'Variable of Intrest';
+        pred_label = 'Network (Ihat) score';
+        LM_values_slope = ['Slope: ' num2str(Slope)];
+        LM_values_intercept = ['Intercept: ' num2str(Intercept)];
+    end
+
+
+
+
+
+
+
+
+
+
     ss.mdl = mdl;
-
-
     % add the connectome name for recognition
     ss.model_vals=vals;
     %export results of space

@@ -281,12 +281,12 @@ classdef ea_sweetspot < handle
             % NumTestSets = 18;  % as many as patients
             % 
 
-            % Cologne Shell
-            patientsel_all = 1:size(obj.setselections{1,1},2);
-            patientsel_all = patientsel_all';
-            [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,2});
-            patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
-            NumTestSets = 24;  % as many as patients
+            % % Cologne Shell
+            % patientsel_all = 1:size(obj.setselections{1,1},2);
+            % patientsel_all = patientsel_all';
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,2});
+            % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
+            % NumTestSets = 24;  % as many as patients
 
             % 
             % patientsel_all = patientsel;
@@ -297,7 +297,7 @@ classdef ea_sweetspot < handle
             % NumTestSets = 24;
 
 
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -554,8 +554,7 @@ classdef ea_sweetspot < handle
 
                     if obj.useExternalModel == true
                         Ihat_train_global_av_sides = 0;
-                        training = test;
-                        AUC = ea_logit_regression(0, Ihat_av_sides, I, training, test);
+                        AUC = ea_logit_regression(S, Ihat_av_sides, I, nan, test);
                     else
                         Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (1, N, sides)
                         AUC = ea_logit_regression(Ihat_train_global_av_sides(training)', Ihat_av_sides, I, training, test);
