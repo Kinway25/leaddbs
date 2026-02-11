@@ -1,4 +1,4 @@
-function Ihat_prediction = ea_logit_regression_fold(Ihat_train, Ihat, Improvement, training, test)
+function [Ihat_prediction,scores_test,log_loss,AUC] = ea_logit_regression_fold(Ihat_train, Ihat, Improvement, training, test)
 
 % Fit logit model, compute ROC and find the optimal threshold.
 % Compute confustion matrix for the test set (can be the same as training)
@@ -61,5 +61,9 @@ scores_thresh = T((X==OPTROCPT(1))&(Y==OPTROCPT(2)));
 % prediction for test based on the logit model
 scores_test = predict(mdl,Ihat(test));
 Ihat_prediction = scores_test > scores_thresh;
+
+% Compute Log Loss
+log_loss = -mean(Improvement(test) .* log(scores_test) + (1 - Improvement(test)) .* log(1 - scores_test));
+
 
 end

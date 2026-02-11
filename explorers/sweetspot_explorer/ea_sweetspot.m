@@ -288,14 +288,14 @@ classdef ea_sweetspot < handle
             patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
             NumTestSets = 24;  % as many as patients
 
-
-            % patientsel_all = patientsel;
-            % % [training_all, test_all] = LOPO(obj,patientsel_all);
-            % % NumTestSets = 18;
             % 
+            % patientsel_all = patientsel;
+            % % % [training_all, test_all] = LOPO(obj,patientsel_all);
+            % % % NumTestSets = 18;
+            % % 
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
-            % 
+
 
             %NumTestSets = cvp.NumTestSets;
 
@@ -436,10 +436,16 @@ classdef ea_sweetspot < handle
                     % fit logit in k-fold
                     % this will create a lot of plots!
                     if NumTestSets ~= 0
+
+                        log_loss = nan(NumTestSets,1);
+                        AUC = nan(NumTestSets,1);
                         
                         Ihat_train_global_av_sides = ea_nanmean(Ihat_train_global,3); % in this case, dimens is (cvp.NumTestSets, N, sides)
-                        AUC = zeros(cvp.NumTestSets,1);
                         Ihat_prediction = false(size(Ihat_av_sides,1),1);
+                        Ihat_prob = nan(size(Ihat_av_sides,1),1);
+
+                        test_shell_inx = [];
+
                         for c=1:NumTestSets
                             if isobject(cvp)
                                 %training = cvp.training(c);
@@ -455,8 +461,67 @@ classdef ea_sweetspot < handle
                             % only choose real test patients
                             patientsel_test = patientsel(test);
 
-                            Ihat_prediction(test) = ea_logit_regression_fold(Ihat_train_global_av_sides(c,training) ,Ihat_av_sides, I, training, test);
+                            % % only test other shells
+                            % test_shells = zeros(size(test));
+                            % for c_out=1:NumTestSets
+                            %     if c_out == c
+                            %         continue
+                            %         %test_shells = test * training_shell(:,c_out);
+                            %     else
+                            %         test_shells = training_shell(:,c_out) .* test;
+                            %         break
+                            %         %test_shells = test_shells + training_shell(:,c_out);
+                            %     end
+                            % end
+                            % test = logical(test_shells);
+                            %test_shell_inx = [test_shell_inx;find(test)];
+
+                            [Ihat_prediction(test),Ihat_prob(test),log_loss(c),AUC(c)] = ea_logit_regression_fold(Ihat_train_global_av_sides(c,training) ,Ihat_av_sides, I, training, test);
                         end
+
+                        % Binomial test across the threshold
+                        % % bad practice!
+                        % Ihat_prediction = Ihat_prediction(test_shell_inx);
+                        % I = I(test_shell_inx);
+                        % Ihat_prob = Ihat_prob(test_shell_inx);
+                        % 
+                        % % stupid way to define it
+                        % n_trials = size(I,1);
+                        % k_successes = sum((Ihat_prediction & I) | (~Ihat_prediction & ~I));
+                        % 
+                        % p_chance = 0.5;          % Probability of success by chance (0.5 for binary)
+                        % alpha = 0.05;            % Significance level
+                        % 
+                        % % 2. Calculate the p-value
+                        % % We use 'upper' because we want to know if accuracy is GREATER than chance.
+                        % % We subtract 1 from k because binocdf(k, n, p, 'upper') calculates P(X > k).
+                        % % To get P(X >= k), we need P(X > k-1).
+                        % p_value = binocdf(k_successes - 1, n_trials, p_chance, 'upper');
+                        % 
+                        % % 3. Display results
+                        % fprintf('--- Binomial Test Results ---\n');
+                        % fprintf('Accuracy: %.2f%%\n', (k_successes/n_trials)*100);
+                        % fprintf('p-value:  %.4f\n', p_value);
+                        % 
+                        % if p_value < alpha
+                        %     fprintf('Result: Significant! (Reject Null Hypothesis)\n');
+                        % else
+                        %     fprintf('Result: Not significant. (Fail to reject Null Hypothesis)\n');
+                        % end
+                        % 
+                        % % 4. Optional: Visualize the Null Distribution
+                        % figure
+                        % x = 0:n_trials;
+                        % y = binopdf(x, n_trials, p_chance);
+                        % bar(x, y, 'FaceColor', [0.8 0.8 0.8], 'EdgeColor', 'none');
+                        % hold on;
+                        % stem(k_successes, binopdf(k_successes, n_trials, p_chance), 'r', 'LineWidth', 2);
+                        % title('Binomial Distribution (Null Hypothesis)');
+                        % xlabel('Number of Correct Predictions');
+                        % ylabel('Probability');
+                        % legend('Chance Distribution', 'Your Model');
+                        % grid on;
+
 
                         % get the confussion matrix (this can be done on the test set now)
                         figure
@@ -470,9 +535,15 @@ classdef ea_sweetspot < handle
                         
                         sensitivity = tp/(tp + fn);  % TPR
                         specificity = tn/(tn + fp);  % TNR
+                        precision = tp/(tp + fp);
+                        %recall = tp/(tp + fn);
                         
-                        cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity)];
+                        f1 = 2*sensitivity*precision/(sensitivity+precision);
+                        
+                        cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity), '; ', 'F1: ', sprintf('%.2f',f1)];
+                        disp(['Mean log loss = ',sprintf('%0.3f',mean(log_loss)), '; Mean AUC = ',sprintf('%0.3f',mean(AUC))]);
 
+                        %[z_score, p_value] = delong_test_independent(I, Ihat_prob, I, scores_test_amp_all);
 
                     % Do in-sample even for LOO: we test the robustness of
                     % Ihat, not logit model for now
