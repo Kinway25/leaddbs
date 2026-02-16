@@ -53,7 +53,7 @@ local_outcome = outcomein(:)';
 %ICC_table = readtable('/home/interscan/Documents/data/JS/ReFitCohort_Avg_ICC.csv');
 
 
-if license('test', 'Distrib_Computing_Toolbox')
+if license('test', 'Distrib_Computing_Toolboxxx')
     parfor i = 1:size(valsin, 1)
         % --- NaN HANDLING ---
         valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
@@ -101,7 +101,14 @@ else
     % Standard processing (Logic identical to parfor block)
     for i = 1:size(valsin, 1)
         % --- NaN HANDLING ---
-        valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome);
+
+        % changed to SVD Test
+        if isnan(H0_input(i))
+            % no score for lesioned cases
+            continue; 
+        end
+
+        valid_idx = ~isnan(valsin(i, :)) & ~isnan(local_outcome); 
 
         % if full(sum(valid_idx)) ~= size(valsin,2)
         %     disp("NaNs detected")
@@ -117,7 +124,8 @@ else
         
         % --- STATISTICAL CORRECTION ---
         % 1. Center the outcome around the Null Hypothesis
-        Y = curr_outcome - H0_val;
+        %Y = curr_outcome - H0_val;
+        Y = curr_outcome - H0_val(i);
         
         % 2. Predictor is just a constant (intercept) for 1-sample test
         X = ones(N_valid, 1);

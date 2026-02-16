@@ -213,7 +213,7 @@ for group=groups
 %                         Nmap=sum((gfibsval{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
 %                     end
                 case 'Sigmoid Field'
-                    %obj.statsettings.efieldthreshold = 0.9;
+                    %obj.statsettings.efieldthreshold = 0.95;
                     if ICC_weighting
                         Nmap=ea_nansum((fibsval_nonW{side}(:,gpatsel)>obj.statsettings.efieldthreshold),2);
                     else
@@ -262,11 +262,42 @@ for group=groups
                 ea_error(['Function for test ',obj.statsettings.stattest,' missing.']);
             end
 
+            %% Step 2.0:
+            % prepare WMH/PVS plug-in
+            % only analyze fibers with at least 5% lesioned
+            load('fibsvalWMH.mat')
+            % % lesion Nmap mask (to build a preservation map: the higher the value, the more important to have the fiber preserved)
+            %lesion_Nmap=sum(fibsvalWMH{side}(nonempty,gpatsel),2)>=length(gpatsel)*0.1;
+
+            % DBS-lesion Nmap mask (to build a DBS-preservation map: the higher the value, the more important to have the fiber preserved FOR STIMULATION)
+            fibsvalWMH_DBS = fibsvalWMH{side}(nonempty,gpatsel);
+            fibsvalWMH_DBS(valsin<obj.statsettings.efieldthreshold) = 0;
+            lesion_Nmap=sum(fibsvalWMH_DBS,2)>=length(gpatsel)*0.1;
+
+            lesion_Nmap_inx = find(lesion_Nmap);
+            valsin = valsin(lesion_Nmap_inx,:);
+            nonemptyidx=nonemptyidx(lesion_Nmap_inx);
+
+            % now for each fiber compute H0-lesion (average outcome of lesioned cases) 
+            H0_per_fiber = nan(size(lesion_Nmap_inx,1),1);
+            for fib_inx = 1:size(nonemptyidx,1)
+                H0_per_fiber(fib_inx) = ea_nanmean(outcomein(fibsvalWMH{side}(nonemptyidx(fib_inx),gpatsel)==1));
+            end
+            % "lesion" the fibers
+            valsin(logical(fibsvalWMH{side}(nonemptyidx,gpatsel))) = 0; 
+
+            % we do not need to do anything with the outcomes, since in the
+            % one sample T-test their vals=0 
+            %outcomein(fibsvalWMH{side}(nonempty,gpatsel))
+
+
+
             %% Step 2: Fiberfiltering. This part filters fibers based on outcome variable (except for descriptive tests):
 
             %this following line calls the actual statistical test:
             if ~isempty(valsin) && ~isempty(outcomein)
-                [valsout,psout]=feval(stattests.file(idx),valsin,outcomein,obj.statsettings.H0); % apply test
+                %[valsout,psout]=feval(stattests.file(idx),valsin,outcomein,obj.statsettings.H0); % apply test
+                [valsout,psout]=feval(stattests.file(idx),valsin,outcomein,H0_per_fiber); % apply test
                 vals{group,side}(nonemptyidx)=valsout;
                 if exist('pvals','var')
                     pvals{group,side}(nonemptyidx)=psout;
