@@ -43,7 +43,7 @@ stats_str = sprintf('Pearson r=%.3f p=%.5f   Spearman \\rho: %.3f p=%.5f', rho_p
 
 title(stats_str);
 grid on;
-set(gca, 'FontSize', 11);
+set(gca, 'FontSize', 9);
 
          
 % text(0.05, 0.95, stats_str, 'Units', 'normalized', ...

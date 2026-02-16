@@ -166,6 +166,10 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
                                 if lateral_score == false
                                     Ihat_all = ea_nanmean(vals_flat.*fibsval_usedidx_flat,1);
                                     Ihat(test,1, voter) = Ihat_all(test);
+                                    
+                                    % at this point, we can swap NaNs to 0s (the model was already computed)
+                                    fibsval_usedidx_flat(isnan(fibsval_usedidx_flat)) = 0.0;
+                                    
                                     testidx=find(test);
                                     allzerotestidx=testidx(~sum(fibsval_usedidx_flat(:,test)));
                                     Ihat(allzerotestidx,1, voter) = nan; % set Ihats to nan if there is no overlap with even a single VTA

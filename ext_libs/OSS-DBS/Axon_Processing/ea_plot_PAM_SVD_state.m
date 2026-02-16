@@ -1,7 +1,7 @@
 function ea_plot_PAM_SVD_state(varargin)
 
     % example 
-    % ea_plot_PAM_SVD_state('/home/interscan/Documents/data/ReFitLocaJS/derivatives/leaddbs/sub-wsqwVHJahgSRPVzA3yC5rQ/stimulations/native/gs_SVD/SVD_encoded/sub-wsqwVHJahgSRPVzA3yC5rQ_sim-fiberActivation_model-ossdbs_hemi-R.mat')
+    % ea_plot_PAM_SVD_state('/home/interscan/Documents/data/ReFitLocaJS/derivatives/leaddbs/sub-betG4JfKJT6sbdWgKPvmjm/stimulations/native/gs_SVD/SahinNovember2025DS_PetHDP_flipped/PAM_StimProt_left_0/sub-betG4JfKJT6sbdWgKPvmjm_sim-fiberActivation_model-ossdbs_hemi-L.mat')
 
     fiberActivationProb = varargin{1};
     load(fiberActivationProb);
@@ -63,7 +63,8 @@ function ea_plot_PAM_SVD_state(varargin)
             continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.1);
             %set(mytract,'FaceColor',[0 1 0],'FaceAlpha',1.0,'EdgeColor','none')      
-            set(mytract,'FaceColor',[0.7 0.7 0.0],'FaceAlpha',1.0,'EdgeColor','none')  
+            %set(mytract,'FaceColor',[0.7 0.7 0.0],'FaceAlpha',1.0,'EdgeColor','none')  
+            set(mytract,'FaceColor',[0.3725,0.6824,0.6667],'FaceAlpha',1.0,'EdgeColor','none') 
         elseif status(myfibs(fiber_i)) == 3
             % lacunes
             continue
@@ -73,7 +74,8 @@ function ea_plot_PAM_SVD_state(varargin)
             % WMH
             continue
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.1);
-            set(mytract,'FaceColor',[0.5 0.5 0.5],'FaceAlpha',1.0,'EdgeColor','none')
+            %set(mytract,'FaceColor',[0.5 0.5 0.5],'FaceAlpha',1.0,'EdgeColor','none')
+            set(mytract,'FaceColor',[0.2471,0.4157,0.5490],'FaceAlpha',1.0,'EdgeColor','none')
         elseif status(myfibs(fiber_i)) == -1 || status(myfibs(fiber_i)) == -3
             % damaged
             continue
@@ -86,6 +88,7 @@ function ea_plot_PAM_SVD_state(varargin)
             set(mytract,'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',1.0,'EdgeColor','none')    
         elseif status(myfibs(fiber_i)) == 1
             %continue
+            %disp("here")
             mytract = streamtube(fibersnew(myfibs(fiber_i)),0.1);
             %mytract = streamtube(fibersnew(myfibs(fiber_i)),status(myfibs(fiber_i))*1.0);
             %set(mytract,'FaceColor',[status(myfibs(fiber_i))*0.8+0.2,(1-status(myfibs(fiber_i)))*0.33,0],'FaceAlpha',exp_norm_status(myfibs(fiber_i)),'EdgeColor','none')

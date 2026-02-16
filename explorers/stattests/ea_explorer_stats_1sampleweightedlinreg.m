@@ -15,6 +15,12 @@ else
     return;
 end
 
+nan_mask = isnan(outcomein);
+if any(nan_mask)
+    outcomein(nan_mask) = [];
+    valsin(:, nan_mask) = []; % Ensure dimensions stay aligned
+end
+
 % Check if weights are outside the required range [0, 1]
 if any(valsin(:) < 0, 'all') || any(valsin(:) > 1, 'all')
     valsin = normalize(valsin, 'range', [0, 1]);
