@@ -798,25 +798,30 @@ classdef ea_disctract < handle
                 patientsel = obj.customselection;
             end
 
-            %patientsel_custom = patientsel;
-
-            % % % select only patients without NaN scores
+            patientsel_custom = patientsel;
+            % 
+            % % select only patients without NaN scores
+            % 
             % patientsel_custom = patientsel(~isnan(obj.responsevar));
             % patientsel = patientsel_custom;
-            % % 
-            % %[training_all, test_all] = LOPO_JS(obj,patientsel_custom);
-            % [training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
-            % 
-            % % drop empty test folds
-            % training_all(:,all(test_all==0,1)) = [];
-            % test_all(:,all(test_all==0,1)) = [];
-            % NumTestSets = size(test_all,2);
-            % 
-            % %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
-            % 
-            % %NumTestSets = 19;
 
-            NumTestSets = cvp.NumTestSets;
+            % tractset.setlabels{1,24} = 'akinesia_scores';
+            % tractset.setselections{1,24} = false(size(obj.setselections{1,23}));
+            % tractset.setselections{1,24}(1,patientsel) = true;
+            % 
+            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
+
+            % drop empty test folds
+            training_all(:,all(test_all==0,1)) = [];
+            test_all(:,all(test_all==0,1)) = [];
+            NumTestSets = size(test_all,2);
+
+            %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
+
+            %NumTestSets = 19;
+
+            %NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -887,11 +892,11 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    training = cvp.training(c);
-                    test = cvp.test(c);
+                    % training = cvp.training(c);
+                    % test = cvp.test(c);
 
-                    % training = training_all(:,c);
-                    % test = test_all(:,c);
+                    training = training_all(:,c);
+                    test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -952,35 +957,33 @@ classdef ea_disctract < handle
                     Predicted_scores(test) = Ihat_voters_prediction(1:end,1); % only one value here atm
                 end
 
-                % if sum(test) ~= 20 && sum(test) ~= 10
-                %     warning("Check this patient")
-                %     continue
-                % else
-                %     % 1. Create a logical mask for the provided indices
-                %     evaluated_electrodes = obj.M.patient.list(patientsel,1);
-                %     mask = false(size(evaluated_electrodes, 1), 1);
-                %     mask(test) = true;
-                % 
-                %     % 2. Check for the substring "_fl_" in those specific rows
-                %     % We use 'contains' and then apply the mask with a logical AND
-                % 
-                %     test_lh = contains(evaluated_electrodes, "_left_") & mask;
-                %     test_rh = ~contains(evaluated_electrodes, "_left_") & mask;
-                % 
-                %     %test_lh = contains(evaluated_electrodes, "_fl_") & mask;
-                %     %test_rh = ~contains(evaluated_electrodes, "_fl_") & mask;
-                % 
-                %     %test_lh = contains(evaluated_electrodes, "_fl") & mask;
-                %     %test_rh = ~contains(evaluated_electrodes, "_fl") & mask;
-                % 
-                %     if sum(test_rh) ~= 0
-                %         contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,1),Improvement(test_rh,1),'spearman');
-                %     end
-                % 
-                %     if sum(test_lh) ~= 0
-                %         contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,1),Improvement(test_lh,1),'spearman');
-                %     end
-                % end
+                if sum(test) ~= 20 && sum(test) ~= 10
+                    warning("Check this patient")
+                    continue
+                else
+                    % 1. Create a logical mask for the provided indices
+                    evaluated_electrodes = obj.M.patient.list(patientsel,1);
+                    mask = false(size(evaluated_electrodes, 1), 1);
+                    mask(test) = true;
+
+                    % 2. Check for the substring "_fl_" in those specific rows
+                    % We use 'contains' and then apply the mask with a logical AND
+
+                    %test_lh = contains(evaluated_electrodes, "_left_") & mask;
+                    %test_rh = ~contains(evaluated_electrodes, "_left_") & mask;
+
+                    test_lh = contains(evaluated_electrodes, "_fl") & mask;
+                    test_rh = ~contains(evaluated_electrodes, "_fl") & mask;
+
+
+                    if sum(test_rh) ~= 0
+                        contact_rank_corr(c,1) = ea_corr(Ihat(test_rh,1),Improvement(test_rh,1),'spearman');
+                    end
+
+                    if sum(test_lh) ~= 0
+                        contact_rank_corr(c,2) = ea_corr(Ihat(test_lh,1),Improvement(test_lh,1),'spearman');
+                    end
+                end
             end
 
             disp("Lead-wise Ihat vs I rank corr")
@@ -1413,7 +1416,7 @@ classdef ea_disctract < handle
         function draw(obj,vals,fibcell,usedidx) %for cv live visualize
             %function draw(obj,vals,fibcell)
             
-            %obj.statsettings.efieldthreshold = 0.9;
+            %obj.statsettings.efieldthreshold = 0.95;
 
             %obj.customselection = obj.patientselection(~isnan(obj.responsevar));
             %[vals,fibcell,usedidx]=ea_discfibers_calcstats(obj,obj.customselection);
@@ -1585,6 +1588,7 @@ classdef ea_disctract < handle
             end
 
             % print number of significant displayed fibers per pathway (atm only for binary metrics)
+            %if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'efield_peak') || isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
             if obj.multi_pathways == 1 && (isequal(ea_method2methodid(obj),'VAT_Ttest') || isequal(ea_method2methodid(obj),'PAM_Ttest') || isequal(ea_method2methodid(obj),'plainconn'))% at the moment, obj.connFiberInd is defined only for OSS-DBS
                 %disp("number of drawn fibers per pathway")
                 num_per_path = cell(1, 2); % with obj.map_list, rates can be computed
@@ -1616,32 +1620,32 @@ classdef ea_disctract < handle
                 end
 
                 % uncomment to create pie plots of pathways metrics
-%                 figure
-%                 t = tiledlayout(1,2,'TileSpacing','compact');
-%                 nonZero_idx = [num_per_path{1}] > 0;
-%                 num_per_path{1} = num_per_path{1}(nonZero_idx);
-%                 if ~isempty(num_per_path{1})
-%                     % Create pie charts
-%                     ax1 = nexttile;
-%                     pie1 = pie(ax1,num_per_path{1});
-%                     ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
-%                     title('Right HS')
-%                     % Create legend
-%                     lgd = legend(obj.pathway_list(nonZero_idx));
-%                     lgd.Layout.Tile = 'west';
-%                 end
-% 
-%                 ax2 = nexttile;
-%                 colormap(ax2,winter)
-%                 nonZero_idx = [num_per_path{2}] > 0;
-%                 num_per_path{2} = num_per_path{2}(nonZero_idx);
-%                 if ~isempty(num_per_path{2})
-%                     pie(ax2,num_per_path{2})
-%                     title('Left HS')
-%                     % Create legend
-%                     lgd2 = legend(obj.pathway_list(nonZero_idx));
-%                     lgd2.Layout.Tile = 'east';
-%                 end
+                figure
+                t = tiledlayout(1,2,'TileSpacing','compact');
+                nonZero_idx = [num_per_path{1}] > 0;
+                num_per_path{1} = num_per_path{1}(nonZero_idx);
+                if ~isempty(num_per_path{1})
+                    % Create pie charts
+                    ax1 = nexttile;
+                    pie1 = pie(ax1,num_per_path{1});
+                    ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
+                    title('Right HS')
+                    % Create legend
+                    lgd = legend(obj.pathway_list(nonZero_idx));
+                    lgd.Layout.Tile = 'west';
+                end
+
+                ax2 = nexttile;
+                colormap(ax2,winter)
+                nonZero_idx = [num_per_path{2}] > 0;
+                num_per_path{2} = num_per_path{2}(nonZero_idx);
+                if ~isempty(num_per_path{2})
+                    pie(ax2,num_per_path{2})
+                    title('Left HS')
+                    % Create legend
+                    lgd2 = legend(obj.pathway_list(nonZero_idx));
+                    lgd2.Layout.Tile = 'east';
+                end
             end
 
             allvals{1}=[]; % need to use a loop here - cat doesnt work in all cases with partly empty cells..

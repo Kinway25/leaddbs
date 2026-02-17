@@ -2,7 +2,7 @@ function [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcel
 % Calculate fiber connection values based on the VATs and the connectome
 % WARNING: modified for SVD flipped to one hemisphere (numSide=1)
 
-SVD = true;
+SVD = false;
 
 disp('Load Connectome...');
 load(cfile, 'fibers', 'idx');
@@ -132,24 +132,24 @@ for side = 1:numSide
     
                 WMH_lacunes_fibers(pt,2) = sum(vals_min == -1);
     
-                % disp("WMH/lacunes intersection detected")
-                % fibsvalBin{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-                % fibsvalSum{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-                % fibsvalMean{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-                % fibsvalPeak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
-                % fibsval5Peak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+                disp("WMH/lacunes intersection detected")
+                fibsvalBin{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+                fibsvalSum{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+                fibsvalMean{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+                fibsvalPeak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
+                fibsval5Peak{side}(trimmedFiberInd_conn(vals_min < -0.9), pt) = 0;
             end
     
             if any(vals_min == -2)
     
                 PVS_fibers(pt,2) = sum(vals_min == -2);
     
-                % disp("PVS intersection detected")
-                % fibsvalBin{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-                % fibsvalSum{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-                % fibsvalMean{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-                % fibsvalPeak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
-                % fibsval5Peak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+                disp("PVS intersection detected")
+                fibsvalBin{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+                fibsvalSum{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+                fibsvalMean{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+                fibsvalPeak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
+                fibsval5Peak{side}(trimmedFiberInd_conn(vals_min == -2), pt) = nan;
             end
         end
     end
@@ -168,12 +168,12 @@ for side = 1:numSide
     fibcell{side} = mat2cell(connFiber, idx(connFiberInd{side}));
 
     % add PVS NaNs for fibers that were connected in other stims
-    % if SVD
-    %     fibsvalBin{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
-    %     fibsvalSum{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
-    %     fibsvalMean{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
-    %     fibsvalPeak{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
-    %     fibsval5Peak{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
-    % end
+    if SVD
+        fibsvalBin{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
+        fibsvalSum{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
+        fibsvalMean{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
+        fibsvalPeak{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
+        fibsval5Peak{side}(logical(fibsvalPVS{side}(fibIsConnected,:))) = nan;
+    end
 
 end

@@ -45,6 +45,9 @@ if ICC_weighting
     fibsval{1,1} = fibsval{1,1}.*ICCs';
 end
 
+% load('fibsvalPVS.mat')
+% fibsval{1,1} = fibsvalPVS{1,1};
+
 
 if size(I,2)==1 % 1 entry per patient, not per electrode
     I=[I,I]; % both sides the same;
@@ -205,6 +208,13 @@ for group=groups
             switch obj.statsettings.stimulationmodel
                 case 'VTA'
                     Nmap=ea_nansum(gfibsval{side}(:,gpatsel),2);
+
+
+                    % ignore PVS fibers (optional)
+                    %load('fibsvalPVS.mat')
+                    %valsin(logical(fibsvalPVS{side}(nonemptyidx,gpatsel))) = nan; 
+        
+
 %                 case 'Sigmoid Field'
 %                     if strcmp(ea_method2methodid(obj), 'spearman_5peak') || strcmp(ea_method2methodid(obj), 'spearman_peak')
 %                         % 0.5 V / mm -> 0.5 probability
@@ -264,15 +274,29 @@ for group=groups
 
             %% Step 2.0:
             % prepare WMH/PVS plug-in
-            % only analyze fibers with at least 5% lesioned
-            load('fibsvalWMH.mat')
-            % % lesion Nmap mask (to build a preservation map: the higher the value, the more important to have the fiber preserved)
-            %lesion_Nmap=sum(fibsvalWMH{side}(nonempty,gpatsel),2)>=length(gpatsel)*0.1;
+            DBS_preserv_map = false;
 
-            % DBS-lesion Nmap mask (to build a DBS-preservation map: the higher the value, the more important to have the fiber preserved FOR STIMULATION)
-            fibsvalWMH_DBS = fibsvalWMH{side}(nonempty,gpatsel);
-            fibsvalWMH_DBS(valsin<obj.statsettings.efieldthreshold) = 0;
-            lesion_Nmap=sum(fibsvalWMH_DBS,2)>=length(gpatsel)*0.1;
+            if DBS_preserv_map
+                % ignore PVS fibers (optional)
+                load('fibsvalPVS.mat')
+                valsin(logical(fibsvalPVS{side}(nonemptyidx,gpatsel))) = nan; 
+                % does not affect the preservation map since PVS and WMH
+                % are mutually exclusive
+            end
+
+            % only analyze fibers with at least 5% (>) lesioned
+            load('fibsvalWMH.mat')
+
+            if DBS_preserv_map 
+                % DBS-lesion Nmap mask (to build a DBS-preservation map: the higher the value, the more important to have the fiber preserved FOR STIMULATION)
+                fibsvalWMH_DBS = fibsvalWMH{side}(nonempty,gpatsel);
+                %fibsvalWMH_DBS(valsin<0.5) = 0;
+                fibsvalWMH_DBS(valsin<obj.statsettings.efieldthreshold) = 0;
+                lesion_Nmap=sum(fibsvalWMH_DBS,2)>=length(gpatsel)*0.15;
+            else
+                % lesion Nmap mask (to build a preservation map: the higher the value, the more important to have the fiber preserved)
+                lesion_Nmap=sum(fibsvalWMH{side}(nonempty,gpatsel),2)>=length(gpatsel)*0.15;
+            end
 
             lesion_Nmap_inx = find(lesion_Nmap);
             valsin = valsin(lesion_Nmap_inx,:);
@@ -284,12 +308,18 @@ for group=groups
                 H0_per_fiber(fib_inx) = ea_nanmean(outcomein(fibsvalWMH{side}(nonemptyidx(fib_inx),gpatsel)==1));
             end
             % "lesion" the fibers
+            %valsin = 1.0-valsin;
             valsin(logical(fibsvalWMH{side}(nonemptyidx,gpatsel))) = 0; 
+
+            if ~DBS_preserv_map 
+                % for the simple preservation map, we do not need DBS
+                % hence all preserved fibers are 1
+                valsin(~logical(fibsvalWMH{side}(nonemptyidx,gpatsel))) = 1; 
+            end
 
             % we do not need to do anything with the outcomes, since in the
             % one sample T-test their vals=0 
             %outcomein(fibsvalWMH{side}(nonempty,gpatsel))
-
 
 
             %% Step 2: Fiberfiltering. This part filters fibers based on outcome variable (except for descriptive tests):
