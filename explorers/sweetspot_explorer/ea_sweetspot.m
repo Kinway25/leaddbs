@@ -273,7 +273,7 @@ classdef ea_sweetspot < handle
                 patientsel = obj.customselection;
             end
 
-            %threshold_STN_bin = obj.setselections{1,3}(1,obj.patientselection);
+            % threshold_STN_bin = obj.setselections{1,3}(1,obj.patientselection);
             % patientsel_all = 1:size(obj.setselections{1,1},2);
             % patientsel_all = patientsel_all';
             % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,3});
@@ -288,6 +288,13 @@ classdef ea_sweetspot < handle
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
             % NumTestSets = 24;  % as many as patients
 
+            % % Berlin-Cologne Shell
+            % patientsel_all = 1:size(obj.setselections{1,1},2);
+            % patientsel_all = patientsel_all';
+            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,3});
+            % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
+            % NumTestSets = 42;  % as many as patients
+
             % 
             % patientsel_all = patientsel;
             % % % [training_all, test_all] = LOPO(obj,patientsel_all);
@@ -296,8 +303,12 @@ classdef ea_sweetspot < handle
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
+            [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
+            training_all(:,all(test_all==0,1)) = [];
+            test_all(:,all(test_all==0,1)) = [];
+            NumTestSets = size(test_all,2);
 
-            NumTestSets = cvp.NumTestSets;
+            %NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -579,7 +590,7 @@ classdef ea_sweetspot < handle
                         cm.Title = ['Sensitivity: ', sprintf('%.2f',sensitivity), '; ', 'Specificity: ', sprintf('%.2f',specificity), '; ', 'F1: ', sprintf('%.2f',f1)];
                         disp(['Mean log loss = ',sprintf('%0.3f',mean(log_loss)), '; Mean AUC = ',sprintf('%0.3f',mean(AUC))]);
 
-                        %[z_score, p_value] = delong_test_independent(I, Ihat_prob, I, scores_test_amp_all);
+                        [z_score, p_value] = delong_test_independent(I, Ihat_prob, I, scores_test_amp_all);
 
                     % Do in-sample even for LOO: we test the robustness of
                     % Ihat, not logit model for now
