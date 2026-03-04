@@ -87,9 +87,11 @@ function [Ihat,Ihat_train_global,val_struct,actualimprovs] = ea_compute_fibscore
         end
     end
 
-    % for the preservation model
-    load('fibsvalPVS.mat')
-    fibsval{1,1} = fibsvalPVS{1,1};
+    % % % for the preservation model
+    if strcmp(obj.statsettings.stattest,'2-Sample T-Test')
+        load('fibsvalWMH.mat')
+        fibsval{1,1} = fibsvalWMH{1,1};
+    end
 
     % if no fibers were selected for the permutation iteration, 
     % assign dummies that will have r = 0

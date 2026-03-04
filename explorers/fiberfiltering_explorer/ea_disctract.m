@@ -986,8 +986,8 @@ classdef ea_disctract < handle
                 end
             end
 
-            disp("Lead-wise Ihat vs I rank corr")
-            disp(contact_rank_corr)
+            %disp("Lead-wise Ihat vs I rank corr")
+            %disp(contact_rank_corr)
 
             % check if binary variable and not permutation test
             if (~exist('Iperm', 'var') || isempty(Iperm)) && all(ismember(Improvement(:,1), [0,1])) && size(val_struct{c}.vals,1) == 1
@@ -1187,6 +1187,8 @@ classdef ea_disctract < handle
                 Ihat=Ihat_voters_prediction; % replace with actual response variables.
             end
 
+            %disp(sum(isnan(Ihat(:,1))))
+            %Ihat(isnan(Ihat)) = 0.0;
             switch obj.multitractmode
                 case 'Split & Color By Subscore'
                     if ~obj.CleartuneOptim
