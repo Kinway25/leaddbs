@@ -288,12 +288,12 @@ classdef ea_sweetspot < handle
             % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
             % NumTestSets = 24;  % as many as patients
 
-            % % Berlin-Cologne Shell
-            % patientsel_all = 1:size(obj.setselections{1,1},2);
-            % patientsel_all = patientsel_all';
-            % [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,3});
-            % patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
-            % NumTestSets = 42;  % as many as patients
+            % % % Berlin-Cologne Shell
+            patientsel_all = 1:size(obj.setselections{1,1},2);
+            patientsel_all = patientsel_all';
+            [training_shell, test_all] = Kfold_for_shell(obj,patientsel_all,patientsel,obj.setselections{1,3});
+            patientsel = patientsel_all;  % redefine patientsel for the whole STN cohort
+            NumTestSets = 42;  % as many as patients
 
             % 
             % patientsel_all = patientsel;
@@ -303,10 +303,10 @@ classdef ea_sweetspot < handle
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
-            [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
-            training_all(:,all(test_all==0,1)) = [];
-            test_all(:,all(test_all==0,1)) = [];
-            NumTestSets = size(test_all,2);
+            % [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
+            % training_all(:,all(test_all==0,1)) = [];
+            % test_all(:,all(test_all==0,1)) = [];
+            % NumTestSets = size(test_all,2);
 
             %NumTestSets = cvp.NumTestSets;
 

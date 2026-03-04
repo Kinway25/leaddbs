@@ -1,5 +1,5 @@
 function [z_score, p_value] = delong_test_independent(labels1, scores1, labels2, scores2)
-    % Calculates DeLong test for two independent AUCs
+    % Calculates DeLong test for two independent AUCs and plots ROC curves
     
     % 1. Calculate AUCs and Components for Model 1
     [auc1, V10, V01] = calculate_delong_components(labels1, scores1);
@@ -14,6 +14,25 @@ function [z_score, p_value] = delong_test_independent(labels1, scores1, labels2,
     z_score = (auc1 - auc2) / se_diff;
     p_value = 2 * (1 - normcdf(abs(z_score))); % Two-tailed test
     
+    % --- Plotting Section ---
+    figure; hold on;
+    [X1, Y1, ~, AUC_check1] = perfcurve(labels1, scores1, 1);
+    [X2, Y2, ~, AUC_check2] = perfcurve(labels2, scores2, 1);
+    
+    plot(X1, Y1, 'LineWidth', 2, 'DisplayName', sprintf('Model 1 (AUC: %.3f)', auc1));
+    plot(X2, Y2, 'LineWidth', 2, 'DisplayName', sprintf('Model 2 (AUC: %.3f)', auc2));
+    
+    % Add diagonal reference line (random chance)
+    plot([0 1], [0 1], '--k', 'HandleVisibility', 'off'); 
+    
+    xlabel('False Positive Rate');
+    ylabel('True Positive Rate');
+    title(sprintf('ROC Curve Comparison (p = %.4f)', p_value));
+    legend('Location', 'southeast');
+    grid on;
+    hold off;
+    % ------------------------
+
     fprintf('AUC 1: %.4f\nAUC 2: %.4f\n', auc1, auc2);
     fprintf('Z-score: %.4f\nP-value: %.4f\n', z_score, p_value);
 end

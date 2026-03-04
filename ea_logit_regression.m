@@ -171,7 +171,7 @@ if (size(Improvement(test),1) == sum(Improvement(test))*2) || size(Improvement(t
     grid on;
 end
 
-[z_score, p_value] = delong_test_independent(Improvement(test), Ihat_prediction, Improvement(test), scores_test_amp);
+%[z_score, p_value] = delong_test_independent(Improvement(test), Ihat_prediction, Improvement(test), scores_test_amp);
 
 
 
