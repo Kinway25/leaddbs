@@ -344,7 +344,7 @@ classdef ea_sweetspot < handle
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
-                    %test = true(size(test));
+                    test = true(size(test));
                 end
 
                 if obj.useExternalModel == true && ~strcmp(obj.ExternalModelFile, 'None')
@@ -444,20 +444,25 @@ classdef ea_sweetspot < handle
             Ihat_av_sides(1,1) = 0.0;  % manuall corr for NaN (no overlap)
             scores_test = predict(S.mdl,Ihat_av_sides(test));
             Ihat_prediction = scores_test > S.scores_thresh;
+            %Ihat_prediction = scores_test > 0.6;
+
 
             Ihat_prediction_with_scores = Ihat_prediction(~isnan(I));
             I_nnan = I(~isnan(I));
             %[h,p] = ttest2(I(Ihat_prediction_with_scores),I(~Ihat_prediction_with_scores));
 
+            %ea_corrplot(scores_test,I_nnan)
+
             groupA = I_nnan(Ihat_prediction_with_scores);
             groupB = I_nnan(~Ihat_prediction_with_scores);
 
-            [h, p, ci, stats] = ttest2(groupA, groupB, 'Tail', 'right');
+            %[h, p, ci, stats] = ttest2(groupA, groupB, 'Tail', 'right');
+            [p, h,stats] = ranksum(groupA, groupB, 'Tail', 'right');
 
             % 3. Display Results
-            fprintf('--- One-Sided T-Test Results (A > B) ---\n');
-            fprintf('T-statistic: %.4f\n', stats.tstat);
-            fprintf('P-value:     %.4f\n', p);
+            %fprintf('--- One-Sided T-Test Results (A > B) ---\n');
+            %fprintf('T-statistic: %.4f\n', stats.tstat);
+            %fprintf('P-value:     %.4f\n', p);
             if h == 1
                 fprintf('Result: Reject Null. Evidence suggests Group A > Group B.\n');
             else
@@ -483,8 +488,9 @@ classdef ea_sweetspot < handle
                      'YColor', 'w', ...
                      'GridColor', 'w');
 
-            ylabel('Rigidity Improvement, %', 'Color', 'w');
-            title(['Right-Tailed T-Test (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
+            ylabel('Improvement, %', 'Color', 'w');
+            %title(['Right-Tailed T-Test (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
+            title(['Right-Tailed ranksum (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
 
 
             % check if binary variable and not permutation test
