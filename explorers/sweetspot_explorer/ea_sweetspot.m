@@ -303,12 +303,12 @@ classdef ea_sweetspot < handle
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
-            % [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
-            % training_all(:,all(test_all==0,1)) = [];
-            % test_all(:,all(test_all==0,1)) = [];
-            % NumTestSets = size(test_all,2);
+            [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
+            training_all(:,all(test_all==0,1)) = [];
+            test_all(:,all(test_all==0,1)) = [];
+            NumTestSets = size(test_all,2);
 
-            NumTestSets = cvp.NumTestSets;
+            %NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -335,16 +335,16 @@ classdef ea_sweetspot < handle
                     % training = cvp.training(c);
                     % test = cvp.test(c);
 
-                    % training = training_all(:,c);
-                    % test = test_all(:,c);
-
-                    training = training_shell(:,c);
+                    training = training_all(:,c);
                     test = test_all(:,c);
+
+                    % training = training_shell(:,c);
+                    % test = test_all(:,c);
 
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
-                    test = true(size(test));
+                    %test = true(size(test));
                 end
 
                 if obj.useExternalModel == true && ~strcmp(obj.ExternalModelFile, 'None')
@@ -438,59 +438,59 @@ classdef ea_sweetspot < handle
                 end
             end
 
-            % special use case
-            % predict binary event and do unpaired T-test for the outcome
-            Ihat_av_sides = ea_nanmean(Ihat,2);
-            Ihat_av_sides(1,1) = 0.0;  % manuall corr for NaN (no overlap)
-            scores_test = predict(S.mdl,Ihat_av_sides(test));
-            Ihat_prediction = scores_test > S.scores_thresh;
-            %Ihat_prediction = scores_test > 0.6;
-
-
-            Ihat_prediction_with_scores = Ihat_prediction(~isnan(I));
-            I_nnan = I(~isnan(I));
-            %[h,p] = ttest2(I(Ihat_prediction_with_scores),I(~Ihat_prediction_with_scores));
-
-            %ea_corrplot(scores_test,I_nnan)
-
-            groupA = I_nnan(Ihat_prediction_with_scores);
-            groupB = I_nnan(~Ihat_prediction_with_scores);
-
-            %[h, p, ci, stats] = ttest2(groupA, groupB, 'Tail', 'right');
-            [p, h,stats] = ranksum(groupA, groupB, 'Tail', 'right');
-
-            % 3. Display Results
-            %fprintf('--- One-Sided T-Test Results (A > B) ---\n');
-            %fprintf('T-statistic: %.4f\n', stats.tstat);
-            %fprintf('P-value:     %.4f\n', p);
-            if h == 1
-                fprintf('Result: Reject Null. Evidence suggests Group A > Group B.\n');
-            else
-                fprintf('Result: Fail to reject Null. No evidence that Group A > Group B.\n');
-            end
-
-            % 4. Visualization
-            % CHANGE: Set figure background to black
-            figure('Color', 'k'); 
-
-            groupLabels = [repmat({'Pred. Entrain.'}, length(groupA), 1); ...
-                           repmat({'No Pred. Entrain.'}, length(groupB), 1)];
-
-            % Create boxplot
-            h_box = boxplot([groupA; groupB], groupLabels);
-
-            % CHANGE: Set all boxplot lines (boxes, whiskers, medians, caps) to white
-            set(h_box, 'Color', 'w');
-
-            % CHANGE: Set axes background to black and axes/ticks/labels to white
-            set(gca, 'Color', 'k', ...
-                     'XColor', 'w', ...
-                     'YColor', 'w', ...
-                     'GridColor', 'w');
-
-            ylabel('Improvement, %', 'Color', 'w');
-            %title(['Right-Tailed T-Test (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
-            title(['Right-Tailed ranksum (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
+            % % special use case
+            % % predict binary event and do unpaired T-test for the outcome
+            % Ihat_av_sides = ea_nanmean(Ihat,2);
+            % Ihat_av_sides(1,1) = 0.0;  % manuall corr for NaN (no overlap)
+            % scores_test = predict(S.mdl,Ihat_av_sides(test));
+            % Ihat_prediction = scores_test > S.scores_thresh;
+            % %Ihat_prediction = scores_test > 0.685;  % the level where FN == FP
+            % 
+            % 
+            % Ihat_prediction_with_scores = Ihat_prediction(~isnan(I));
+            % I_nnan = I(~isnan(I));
+            % %[h,p] = ttest2(I(Ihat_prediction_with_scores),I(~Ihat_prediction_with_scores));
+            % 
+            % %ea_corrplot(scores_test(~isnan(I)),I_nnan)
+            % 
+            % groupA = I_nnan(Ihat_prediction_with_scores);
+            % groupB = I_nnan(~Ihat_prediction_with_scores);
+            % 
+            % %[h, p, ci, stats] = ttest2(groupA, groupB, 'Tail', 'right');
+            % [p, h,stats] = ranksum(groupA, groupB, 'Tail', 'right');
+            % 
+            % % 3. Display Results
+            % %fprintf('--- One-Sided T-Test Results (A > B) ---\n');
+            % %fprintf('T-statistic: %.4f\n', stats.tstat);
+            % %fprintf('P-value:     %.4f\n', p);
+            % if h == 1
+            %     fprintf('Result: Reject Null. Evidence suggests Group A > Group B.\n');
+            % else
+            %     fprintf('Result: Fail to reject Null. No evidence that Group A > Group B.\n');
+            % end
+            % 
+            % % 4. Visualization
+            % % CHANGE: Set figure background to black
+            % figure('Color', 'k'); 
+            % 
+            % groupLabels = [repmat({'Pred. Entrain.'}, length(groupA), 1); ...
+            %                repmat({'No Pred. Entrain.'}, length(groupB), 1)];
+            % 
+            % % Create boxplot
+            % h_box = boxplot([groupA; groupB], groupLabels);
+            % 
+            % % CHANGE: Set all boxplot lines (boxes, whiskers, medians, caps) to white
+            % set(h_box, 'Color', 'w');
+            % 
+            % % CHANGE: Set axes background to black and axes/ticks/labels to white
+            % set(gca, 'Color', 'k', ...
+            %          'XColor', 'w', ...
+            %          'YColor', 'w', ...
+            %          'GridColor', 'w');
+            % 
+            % ylabel('Improvement, %', 'Color', 'w');
+            % %title(['Right-Tailed T-Test (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
+            % title(['Right-Tailed ranksum (p = ', num2str(p, '%.4f'), ')'], 'Color', 'w');
 
 
             % check if binary variable and not permutation test
