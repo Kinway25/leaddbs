@@ -283,7 +283,7 @@ classdef ea_disctract < handle
             end
 
             % check if files exist
-            FilesExist = check_stimvols(obj);
+            %FilesExist = check_stimvols(obj);
 
             if isfield(obj.M,'pseudoM') % failsave - this should not be necessary but still making sure things are set correctly for the pseudoM case.
                 if isfield(obj.M,'StimSets_PAM')
@@ -306,9 +306,10 @@ classdef ea_disctract < handle
                 otherwise     % check fiber recruitment via intersection with VTA
                     if strcmp(obj.calculationMethod,'E-field/Voxel Based Method')
                         fprintf("Calculating using the traditional E-field based method. Using dMRI connectome: %s",obj.connectome);
-                        if all(FilesExist)
-                            calculate_on_efield(obj,cfile)
-                        end
+                        % if all(FilesExist)
+                        %     calculate_on_efield(obj,cfile)
+                        % end
+                        calculate_on_efield(obj,cfile)
                     elseif strcmp(obj.calculationMethod,'Fiber Based Method')
                         % check whether to use new (calc_on_fibers) or old method:
                         fprintf("Calculating using the Fiber based method. Using dMRI connectome: %s",obj.connectome);
@@ -354,45 +355,45 @@ classdef ea_disctract < handle
                 otherwise
                     if strcmp(obj.calculationMethod,'Fiber Based Method')
                         [~,FilesExist] = ea_discfibers_getlattice(obj);
-                    else
-                        if isfield(obj.M,'pseudoM')
-                            for entry=1:length(obj.M.ROI.list)
-                                FilesExist(entry)=exist(obj.M.ROI.list{entry},'file');
-                            end
-                        else
-                            [~,FilesExist] = ea_discfibers_getvats(obj);
-                        end
+                    % else
+                    %     if isfield(obj.M,'pseudoM')
+                    %         for entry=1:length(obj.M.ROI.list)
+                    %             FilesExist(entry)=exist(obj.M.ROI.list{entry},'file');
+                    %         end
+                    %     else
+                    %         [~,FilesExist] = ea_discfibers_getvats(obj);
+                    %     end
                     end
-                    while ~all(FilesExist(:))
-                        answ=questdlg('It seems like not all stimulation volumes have been calculated. We can initiate the process now, but this will take some time. Proceed?','Stimvolumes not calculated','yes','no','yes');
-                        switch answ
-                            case 'yes'
-                                if strcmp(obj.calculationMethod,'Fiber Based Method')
-                                    obj.M.vatmodel='OSS-DBS (Butenko 2020)';
-                                    switch obj.native
-                                        case 1
-                                            space = 'native';
-                                        case 0
-                                            space = 'MNI';
-                                    end
-                                end
-                                options=ea_defaultoptions;
-                                options.prefs.machine.vatsettings.butenko_calcPAM=0;
-                                options.prefs.machine.vatsettings.butenko_calcVAT=1;
-                                options.groupdir=fileparts(obj.leadgroup);
-                                if isfield(obj.M.ui, 'stimSetMode') && obj.M.ui.stimSetMode
-                                    options.stimSetMode = 1;
-                                else
-                                    options.stimSetMode = 0;
-                                end
-                                filesToCalc = find(sum(FilesExist(1:length(obj.M.patient.list),:),2)<2)';
-                                calc_biophysical(obj,options,filesToCalc);
-                                [~,FilesExist] = ea_discfibers_getvats(obj);
-                            case 'no'
-                                return
-                        end
-                    end
-                    %recheck
+                    % while ~all(FilesExist(:))
+                    %     answ=questdlg('It seems like not all stimulation volumes have been calculated. We can initiate the process now, but this will take some time. Proceed?','Stimvolumes not calculated','yes','no','yes');
+                    %     switch answ
+                    %         case 'yes'
+                    %             if strcmp(obj.calculationMethod,'Fiber Based Method')
+                    %                 obj.M.vatmodel='OSS-DBS (Butenko 2020)';
+                    %                 switch obj.native
+                    %                     case 1
+                    %                         space = 'native';
+                    %                     case 0
+                    %                         space = 'MNI';
+                    %                 end
+                    %             end
+                    %             options=ea_defaultoptions;
+                    %             options.prefs.machine.vatsettings.butenko_calcPAM=0;
+                    %             options.prefs.machine.vatsettings.butenko_calcVAT=1;
+                    %             options.groupdir=fileparts(obj.leadgroup);
+                    %             if isfield(obj.M.ui, 'stimSetMode') && obj.M.ui.stimSetMode
+                    %                 options.stimSetMode = 1;
+                    %             else
+                    %                 options.stimSetMode = 0;
+                    %             end
+                    %             filesToCalc = find(sum(FilesExist(1:length(obj.M.patient.list),:),2)<2)';
+                    %             calc_biophysical(obj,options,filesToCalc);
+                    %             [~,FilesExist] = ea_discfibers_getvats(obj);
+                    %         case 'no'
+                    %             return
+                    %     end
+                    % end
+                    % %recheck
                     
             end
             return
@@ -809,19 +810,19 @@ classdef ea_disctract < handle
             % tractset.setselections{1,24} = false(size(obj.setselections{1,23}));
             % tractset.setselections{1,24}(1,patientsel) = true;
             % 
-            [training_all, test_all] = LOPO_JS(obj,patientsel_custom);
+            %[training_all, test_all] = LOPO_JS(obj,patientsel_custom);
             %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel_custom);
 
-            % drop empty test folds
-            training_all(:,all(test_all==0,1)) = [];
-            test_all(:,all(test_all==0,1)) = [];
-            NumTestSets = size(test_all,2);
+            % % drop empty test folds
+            % training_all(:,all(test_all==0,1)) = [];
+            % test_all(:,all(test_all==0,1)) = [];
+            % NumTestSets = size(test_all,2);
 
             %[training_all, test_all] = LOPO_JS_PAM_StimSets(obj,patientsel);
 
             %NumTestSets = 19;
 
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
             switch obj.multitractmode
                 case 'Split & Color By PCA'
@@ -892,11 +893,11 @@ classdef ea_disctract < handle
                 end
 
                 if isobject(cvp)
-                    % training = cvp.training(c);
-                    % test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
                 elseif isstruct(cvp)
                     training = cvp.training{c};
                     test = cvp.test{c};
@@ -1621,33 +1622,33 @@ classdef ea_disctract < handle
                     %disp(num_per_path{side})  % for now just print number of fibers per pathway
                 end
 
-                % uncomment to create pie plots of pathways metrics
-                figure
-                t = tiledlayout(1,2,'TileSpacing','compact');
-                nonZero_idx = [num_per_path{1}] > 0;
-                num_per_path{1} = num_per_path{1}(nonZero_idx);
-                if ~isempty(num_per_path{1})
-                    % Create pie charts
-                    ax1 = nexttile;
-                    pie1 = pie(ax1,num_per_path{1});
-                    ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
-                    title('Right HS')
-                    % Create legend
-                    lgd = legend(obj.pathway_list(nonZero_idx));
-                    lgd.Layout.Tile = 'west';
-                end
-
-                ax2 = nexttile;
-                colormap(ax2,winter)
-                nonZero_idx = [num_per_path{2}] > 0;
-                num_per_path{2} = num_per_path{2}(nonZero_idx);
-                if ~isempty(num_per_path{2})
-                    pie(ax2,num_per_path{2})
-                    title('Left HS')
-                    % Create legend
-                    lgd2 = legend(obj.pathway_list(nonZero_idx));
-                    lgd2.Layout.Tile = 'east';
-                end
+                % % uncomment to create pie plots of pathways metrics
+                % figure
+                % t = tiledlayout(1,2,'TileSpacing','compact');
+                % nonZero_idx = [num_per_path{1}] > 0;
+                % num_per_path{1} = num_per_path{1}(nonZero_idx);
+                % if ~isempty(num_per_path{1})
+                %     % Create pie charts
+                %     ax1 = nexttile;
+                %     pie1 = pie(ax1,num_per_path{1});
+                %     ax1.Colormap = parula(numel(pie1)/2);  % they are all ugl
+                %     title('Right HS')
+                %     % Create legend
+                %     lgd = legend(obj.pathway_list(nonZero_idx));
+                %     lgd.Layout.Tile = 'west';
+                % end
+                % 
+                % ax2 = nexttile;
+                % colormap(ax2,winter)
+                % nonZero_idx = [num_per_path{2}] > 0;
+                % num_per_path{2} = num_per_path{2}(nonZero_idx);
+                % if ~isempty(num_per_path{2})
+                %     pie(ax2,num_per_path{2})
+                %     title('Left HS')
+                %     % Create legend
+                %     lgd2 = legend(obj.pathway_list(nonZero_idx));
+                %     lgd2.Layout.Tile = 'east';
+                % end
             end
 
             allvals{1}=[]; % need to use a loop here - cat doesnt work in all cases with partly empty cells..
