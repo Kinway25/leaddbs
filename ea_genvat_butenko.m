@@ -65,7 +65,7 @@ settings.reuse_warped_connectome = 0;  % set to 1 if the connectome was already 
 prepFiles_cluster = 0; % set to 1 if you only want to prep files for cluster comp.
 true_VTA = 0; % set to 1 to compute classic VAT using axonal grids
 settings.outOfCore = 0; % set to 1 if RAM capacity is exceeded during PAM
-settings.segment_SVD = 0; % requires SynthSeg and certain Docker containers (see ea_svd_segmentation)
+settings.segment_SVD = 1; % requires SynthSeg and certain Docker containers (see ea_svd_segmentation)
 
 % set outputs
 outputPaths = ea_get_oss_outputPaths(options,S);

@@ -28,27 +28,27 @@ if ~isdeployed
         end
     end
 
-    % Patch SPM cfg files
-    SPMPatched = 0;
-    spmDir = fileparts(which('spm'));
-    targets = {
-        fullfile(spmDir, 'config', 'spm_cfg_deformations.m')
-        fullfile(spmDir, 'config', 'spm_cfg_norm.m')
-        fullfile(spmDir, 'toolbox', 'Shoot', 'tbx_cfg_shoot.m')
-    };
-    if startsWith(ver, 'SPM12')
-        targets{end+1} = fullfile(spmDir, 'spm_platform.m');
-    end
-    flagFile = fullfile(ea_prefsdir, 'SPMPatched.json');
-    if isfile(flagFile)
-        flag = loadjson(flagFile);
-        if all(contains(flag.pathedFile, targets))
-            SPMPatched = 1;
-        end
-    end
-
-    if ~SPMPatched
-        ea_patch_spm;
-        ea_cprintf('CmdWinWarnings', 'Patched SPM cfg files for use in LeadDBS.\n')
-    end
+    % % Patch SPM cfg files
+    % SPMPatched = 0;
+    % spmDir = fileparts(which('spm'));
+    % targets = {
+    %     fullfile(spmDir, 'config', 'spm_cfg_deformations.m')
+    %     fullfile(spmDir, 'config', 'spm_cfg_norm.m')
+    %     fullfile(spmDir, 'toolbox', 'Shoot', 'tbx_cfg_shoot.m')
+    % };
+    % if startsWith(ver, 'SPM12')
+    %     targets{end+1} = fullfile(spmDir, 'spm_platform.m');
+    % end
+    % flagFile = fullfile(ea_prefsdir, 'SPMPatched.json');
+    % if isfile(flagFile)
+    %     flag = loadjson(flagFile);
+    %     if all(contains(flag.pathedFile, targets))
+    %         SPMPatched = 1;
+    %     end
+    % end
+    % 
+    % if ~SPMPatched
+    %     ea_patch_spm;
+    %     ea_cprintf('CmdWinWarnings', 'Patched SPM cfg files for use in LeadDBS.\n')
+    % end
 end

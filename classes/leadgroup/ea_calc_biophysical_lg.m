@@ -135,12 +135,12 @@ for pt=selection
         setappdata(resultfig,'stimparams',stimparams(1,:));
     end
 
-    % Calc VAT stats (atlas intersection and volume)
-    if all(vatCalcPassed)
-        ea_calc_vatstats(resultfig,options);
-    else
-        ea_cprintf('CmdWinErrors', 'Failed to calculate VTA for patient %s side %s!\n', options.patientname, num2str(find(~vatCalcPassed)));
-    end
+    % % Calc VAT stats (atlas intersection and volume)
+    % if all(vatCalcPassed)
+    %     ea_calc_vatstats(resultfig,options);
+    % else
+    %     ea_cprintf('CmdWinErrors', 'Failed to calculate VTA for patient %s side %s!\n', options.patientname, num2str(find(~vatCalcPassed)));
+    % end
 
     % Step 3: Re-calculate connectivity from VAT to rest of the brain.
     if all(vatCalcPassed)

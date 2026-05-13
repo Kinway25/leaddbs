@@ -24,9 +24,16 @@ if __name__ == '__main__':
     ''' input processing '''
     SEEG_recos = sys.argv[1]
     _,extension = os.path.splitext(SEEG_recos)
+<<<<<<< Updated upstream
     if extension == '.tsv':
         # either we get reco from tsv (Clemens' format)
         SEEG_recos_df = pd.read_csv(SEEG_recos, sep='\t')
+=======
+    if extension == '.tsv' or extension == '.csv':
+        # either we get reco from tsv (BIDS format)
+        SEEG_recos_df = pd.read_csv(SEEG_recos)  # make sure that contact numbering in the ascending order
+        SEEG_recos_df = pd.read_csv(SEEG_recos,delimiter='\t')  # make sure that contact numbering in the ascending order
+>>>>>>> Stashed changes
     elif extension == '.mat':
         print("Lead-DBS reconstruction files are currently not supported")
         raise SystemExit()
@@ -66,6 +73,9 @@ if __name__ == '__main__':
         ''' determine two contacts (active and adjacent) to build the trajctory '''
         cnt_ID = contacts2simulate[cnt_i]  # actual label
         flip = False;
+
+        if cnt_ID != 'RTp4':
+            continue
         
         # IMPORTANT: this is a hard assumption that contact labels start with 1!
         index_on_electrode = extract_index(cnt_ID) - 1  # integer index

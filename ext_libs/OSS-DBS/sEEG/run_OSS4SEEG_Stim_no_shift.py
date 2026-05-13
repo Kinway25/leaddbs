@@ -116,11 +116,19 @@ def get_geom_definitions(contact_locations):
     unit_directions = unit_directions.flatten()
     
     Dimensions = {
+<<<<<<< Updated upstream
                 "x[mm]": 100.0
                 + np.abs(unit_directions[0]) * actual_span * 2.0,
                 "y[mm]": 100.0
                 + np.abs(unit_directions[1]) * actual_span * 2.0,
                 "z[mm]": 100.0
+=======
+                "x[mm]": 75.0
+                + np.abs(unit_directions[0]) * actual_span * 2.0,
+                "y[mm]": 75.0
+                + np.abs(unit_directions[1]) * actual_span * 2.0,
+                "z[mm]": 75.0
+>>>>>>> Stashed changes
                 + np.abs(unit_directions[2]) * actual_span * 2.0,
             }
     

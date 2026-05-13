@@ -120,6 +120,12 @@ class AnalysisReporter:
             mono_indices = np.where(nonzero_counts == 1)[0]
             if len(mono_indices) > 0:
                 error_ANN_mono = error_ANN[mono_indices, :]
+                
+                columns='Contact0,Contact1,Contact2,Contact3,Contact4,Contact5,Contact6,Contact7,PA,Error'
+                #print(X_test[mono_indices,:].shape,error_ANN[mono_indices,:].shape,y_test[mono_indices].shape)
+                mono_result = np.concatenate((X_test[mono_indices,:],y_test[mono_indices],error_ANN[mono_indices,:]),axis=1)
+                np.savetxt(os.path.join(self.nb_hemi_idx_folder,'Mono_Errors.csv'),mono_result,delimiter=',',header=columns)
+                
         
         return error_ANN, error_ANN_bi, error_ANN_mono
 
@@ -214,6 +220,39 @@ class AnalysisReporter:
         if check_trivial:
             self._plot_trivial_errors(pathway_filtered, error_filename_base, hemi_idx_label, error_ann_bi, 'Bipolar')
             self._plot_trivial_errors(pathway_filtered, error_filename_base, hemi_idx_label, error_ann_mono, 'Monopolar')
+<<<<<<< Updated upstream
+=======
+            
+            
+        # correlation of percent activation and error
+        for i, pathway in enumerate(pathway_filtered):
+        
+            # correlation of percent activations and errors
+            #print(y_test.shape, error_ann[:, i].shape)
+            pearson_r2, pearson_p2 = pearsonr(y_test[:,0], abs(error_ann[:, i]))
+            #print(pearson_r2, pearson_p2)
+    
+            # 4. Create the scatter plot
+            plt.scatter(y_test*100, error_ann[:, i], color='blue', alpha=0.6, edgecolors='w')
+            
+            # Add a horizontal line at 0 to indicate zero error
+            plt.axhline(0, color='red', linestyle='--', linewidth=1)
+            
+            # Add labels and title using LaTeX formatting
+            plt.xlabel("Percent Activation")
+            plt.ylabel("Error of Percent Activation (Actual - Predicted)")
+            
+            # Add grid for readability
+            plt.grid(True, linestyle=':', alpha=0.7)
+            
+            plt.text(0.05, 0.85, f"Abs. Error vs PA R = {pearson_r2:.2f}, p = {pearson_p2:.5f}",
+                     transform=plt.gca().transAxes, fontsize=10)
+            
+            # 5. Save the plot
+            filename_PA_error = f"{error_filename_base}_versus_PA_on_Test{hemi_idx_label}.png"
+            plt.savefig(os.path.join(self.nb_hemi_idx_folder, filename_PA_error), format='png', dpi=500)
+            plt.close()
+>>>>>>> Stashed changes
 
     def _plot_trivial_errors(self, pathway_filtered: List[str], error_filename_base: str, 
                              hemi_idx_label: str, error_array: Optional[np.ndarray], protocol_type: str):

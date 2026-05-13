@@ -556,6 +556,9 @@ def preprocess(path_image, ct, n_levels=5, crop=None, min_pad=None, path_resampl
 
     # read image and corresponding info
     im, _, aff, n_dims, n_channels, h, im_res = get_volume_info(path_image, True)
+    
+    im = np.nan_to_num(im)
+    
     if n_dims < 3:
         raise Exception('input should have 3 dimensions, had %s' % n_dims)
     elif n_dims == 4 and n_channels == 1:
@@ -590,6 +593,7 @@ def preprocess(path_image, ct, n_levels=5, crop=None, min_pad=None, path_resampl
     if ct:
         im = np.clip(im, 0, 80)
     im = rescale_volume(im, new_min=0, new_max=1, min_percentile=0.5, max_percentile=99.5)
+    print(np.min(im))
 
     # Automatically crop to bounding box of non-zero stuff in the re-normalised image
     if autocrop and crop_idx is None:

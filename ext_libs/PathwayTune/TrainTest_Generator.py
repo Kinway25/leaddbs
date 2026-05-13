@@ -116,6 +116,11 @@ def scale_array_to_l1_norm(array, target_norm, norm_type):
             #if norm_type == 'L1_polarity':
             #    print(scaling_factor, array[vector_i,:],original_norms[vector_i])
             array[vector_i,:] = array[vector_i,:] * scaling_factor
+            
+    
+    # # actually, I just need to devide once by the original max norm!
+    # scaling_factor = target_norm / np.max(original_norms)
+    # array = array * scaling_factor
 
     return array
 
@@ -216,14 +221,8 @@ def create_Training_Test_sets(stim_folder, electrode_model, conc_threshold, segm
             samples[:, :] = samples[:, :] * (conc_threshold[1] - conc_threshold[0]) + conc_threshold[0]
 
     
-        # downscale (if necessary to abide current bounds)
-        samples = scale_array_to_l1_norm(samples, abs_current_threshold,'L1')
-        samples = scale_array_to_l1_norm(samples, total_current_threshold,'L1_sign')
-        samples = scale_array_to_l1_norm(samples, one_pol_current_threshold,'L1_polarity')
-        
-    
-        # randomly nullify entries in a 50% of samples to marginalize
-        # given the fact how we scale to max above, I would marginalize even more samples
+        #randomly nullify entries in a 50% of samples to marginalize
+        #given the fact how we scale to max above, I would marginalize even more samples
         import random
         for i in range(samples.shape[0]):
             if i % 2 == 0:
@@ -246,6 +245,13 @@ def create_Training_Test_sets(stim_folder, electrode_model, conc_threshold, segm
                 # double if all currents below 0.5 mA
                 if np.all(abs(samples[i, :]) < 0.5):
                     samples[i, :] = samples[i, :] * 2
+    
+        
+        # downscale (if necessary to abide current bounds)
+        samples = scale_array_to_l1_norm(samples, abs_current_threshold,'L1')
+        samples = scale_array_to_l1_norm(samples, total_current_threshold,'L1_sign')
+        samples = scale_array_to_l1_norm(samples, one_pol_current_threshold,'L1_polarity')       
+    
     
         # add the loaded ones
         if predefined_trainset:
@@ -331,8 +337,22 @@ if __name__ == '__main__':
     # sys.argv[3] - side (0-rh)
     # sys.argv[6:] - min cylind, max cylind, min segm, max_segm
 
+<<<<<<< Updated upstream
     #predefined_trainset = '/home/interscan/Documents/GitHub/leaddbs/ext_libs/PathwayTune/Training_Current_protocols_LHS_L1_7_50perc.csv'
     #predefined_testset = None
 
     create_Training_Test_sets(sys.argv[1], sys.argv[2], [float(sys.argv[4]), float(sys.argv[5])],
                               [float(sys.argv[6]), float(sys.argv[7])], int(sys.argv[3]))
+=======
+    predefined_trainset = '/home/interscan/Documents/data/Training_and_Validation_Current_protocols_L1_ball_beta 2_1_DirAlpha_025_B7.csv'
+    predefined_testset = '/home/interscan/Documents/data/CapsuleWBG/MonopolarProtocols_7mA.csv'
+    
+    # predefined_trainset = None
+    # predefined_testset = None
+
+    # create_Training_Test_sets(sys.argv[1], sys.argv[2], [float(sys.argv[4]), float(sys.argv[5])],
+    #                           [float(sys.argv[6]), float(sys.argv[7])], int(sys.argv[3]),predefined_trainset=predefined_trainset,predefined_testset=predefined_testset,monopolar_review=False)
+
+    create_Training_Test_sets(sys.argv[1], sys.argv[2], [float(sys.argv[4]), float(sys.argv[5])],
+                              [float(sys.argv[6]), float(sys.argv[7])], int(sys.argv[3]),predefined_trainset=predefined_trainset,predefined_testset=predefined_testset,monopolar_review=True)
+>>>>>>> Stashed changes
