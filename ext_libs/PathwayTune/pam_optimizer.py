@@ -193,7 +193,6 @@ class PamOptimizer:
         input_settings["CurrentVector"] = S_vector * 1000  # S_vector already in mA, but scaling to A is done later
         print("Currents in mA: ", input_settings["CurrentVector"])
         
-        
         # assign penalty if total current bounds are violated
         if np.sum(input_settings["CurrentVector"]) > TOTAL_CURRENT:
             current_excess = np.abs(np.sum(input_settings["CurrentVector"])) - TOTAL_CURRENT
