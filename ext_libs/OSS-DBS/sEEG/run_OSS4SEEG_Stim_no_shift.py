@@ -346,6 +346,7 @@ if __name__ == '__main__':
                     "y[mm]": tip_position[1],
                     "z[mm]": tip_position[2]
                   },
+                  "RequireAllContactsInBrain": False,
                   "EncapsulationLayer": {
                     "Thickness[mm]": 0.0,
                     "Material": "White matter",
@@ -377,12 +378,12 @@ if __name__ == '__main__':
               "LoadMesh": False,
               "LoadPath": "",
               "MeshingHypothesis": {
-                "Type": "Default",
+                "Type": "Fine",
                 "MaxMeshSize": 1000000.0,
                 "MeshSizeFilename": ""
               },
               "HPRefinement": {
-                "Active": False,
+                "Active": True,
                 "Levels": 2,
                 "Factor": 0.125
               },
@@ -488,7 +489,7 @@ if __name__ == '__main__':
                         "Current[A]": stim_protocol[i]*0.001,
                         "Voltage[V]": 0.0,
                         "Floating": True,
-                        "MaxMeshSizeEdge": 0.08545132017764238  # hardcoded for now,
+                        "MaxMeshSizeEdge": 1e6  # hardcoded for now,
                     }
                 else:
                     cntct_dicts[cntcts_made] = {
@@ -497,7 +498,7 @@ if __name__ == '__main__':
                         "Current[A]": 0.0,
                         "Voltage[V]": stim_protocol[i],
                         "Floating": False,
-                        "MaxMeshSizeEdge": 0.08545132017764238  # hardcoded for now,
+                        "MaxMeshSizeEdge": 1e6  # hardcoded for now,
                     }
         
             cntcts_made += 1
