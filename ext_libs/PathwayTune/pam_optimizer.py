@@ -85,13 +85,12 @@ class PamOptimizer:
                                      maxfun=1e6, seed=42, visit=2.62,
                                      no_local_search=True)
         elif self.optim_settings['optim_alg'] == 'PSO':
-
             from pyswarms.single.global_best import GlobalBestPSO
             bounds = (self.optim_settings['min_bound_per_contact'], self.optim_settings['max_bound_per_contact'])
             options = {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
             nParticles = 10
             optimizer = GlobalBestPSO(n_particles=nParticles, dimensions=len(self.optim_settings['min_bound_per_contact']), options=options, bounds=bounds)
-            cost, optimized_current = optimizer.optimize(self.prepare_swarm, iters=1e6)
+            cost, optimized_current = optimizer.optimize(self.prepare_swarm, iters=int(1e6))
 
 
     def store_iteration_results(self, S_vector, global_score, symptoms_list, estim_Ihat, SE_dict={}):
