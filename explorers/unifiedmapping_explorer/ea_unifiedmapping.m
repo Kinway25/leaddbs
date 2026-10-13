@@ -32,7 +32,9 @@ classdef ea_unifiedmapping < handle
         predictionmodel = 'Linear'; % type of glm used to fit fiber values to actual scores
         showsignificantonly = 0
         alphalevel = 0.05
-        multcompstrategy = 'FDR'; % could be 'Bonferroni'
+        multcompstrategy = 'FDR'; % could be 'Bonferroni', 'Uncorrected', 'Permutation Threshold (Uncorr)', or 'Permutation Threshold (max-statistics)'
+        multcompNperm = 1000 % number of shuffles used by the permutation-based multcompstrategy options (see ea_unified_permutation_nulldist.m / ea_unified_permutation_threshold.m)
+        multcompmaxworkers = 3 % cap on parpool workers for the permutation-threshold parfor loop, if Parallel Computing Toolbox is available
         subscore
         explorerdrawn
         results = struct
@@ -202,12 +204,32 @@ classdef ea_unifiedmapping < handle
                 obj.resultfig = resultfig;
 
                 if isfield(obj.M,'pseudoM')
-                    obj.allpatients = obj.M.ROI.list;
-                    obj.patientselection = 1:length(obj.M.ROI.list);
+                    roiList = obj.M.ROI.list;
+                    % Accept pseudoM lists saved as {rightList, leftList}
+                    % and normalize them to the canonical N-patient-by-side
+                    % cell array used by the mapping calculations.
+                    if isrow(roiList) && all(cellfun(@iscell, roiList))
+                        sideLengths = cellfun(@numel, roiList);
+                        if numel(unique(sideLengths)) ~= 1
+                            ea_error(['The nested pseudoM ROI side lists ', ...
+                                'must contain the same number of patients.']);
+                        end
+                        normalizedRoiList = cell(sideLengths(1), numel(roiList));
+                        for side = 1:numel(roiList)
+                            normalizedRoiList(:,side) = roiList{side}(:);
+                        end
+                        obj.M.ROI.list = normalizedRoiList;
+                    end
+
+                    % Rows represent patients; columns represent input sides.
+                    % Keep the patient list one-dimensional even when pseudoM
+                    % supplies separate right/left NIfTIs.
+                    obj.allpatients = obj.M.ROI.list(:,1);
+                    obj.patientselection = 1:size(obj.M.ROI.list,1);
                     obj.M.root = [fileparts(datapath),filesep];
-                    obj.M.patient.list = cell(size(obj.M.ROI.list,1), 1);
+                    obj.M.patient.list = cell(1, size(obj.M.ROI.list,1));
                     for i = 1:size(obj.M.ROI.list,1)
-                        obj.M.patient.list{i,1} = obj.M.ROI.list{i,1};
+                        obj.M.patient.list{1,i} = obj.M.ROI.list{i,1};
                     end
                     obj.M.patient.group=obj.M.ROI.group; % copies
                 else
@@ -290,7 +312,7 @@ classdef ea_unifiedmapping < handle
                 else
                     vatlist = ea_sweetspotmapping_getvats(obj);
                 end
-                for vat=1:length(vatlist)
+                for vat=1:size(vatlist,1)
                     for side = 1:size(vatlist,2)
                         vta_nii = ea_load_nii(vatlist{vat,side});
                         obj.results.roi{vat,side} = vta_nii;
@@ -482,7 +504,8 @@ classdef ea_unifiedmapping < handle
                         [~,FilesExist] = ea_unifiedmapping_getlattice(obj);
                     else
                         if isfield(obj.M,'pseudoM')
-                            for entry=1:length(obj.M.ROI.list)
+                            FilesExist = false(size(obj.M.ROI.list));
+                            for entry=1:numel(obj.M.ROI.list)
                                 FilesExist(entry)=exist(obj.M.ROI.list{entry},'file');
                             end
                         else
@@ -551,7 +574,10 @@ classdef ea_unifiedmapping < handle
             else
                 [vatlist,~] = ea_unifiedmapping_getvats(obj);
             end
-            [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, fibsval5Peak, fibcell_efield,  connFiberInd, totalFibers] = ea_fiberfiltering_calcvals(vatlist, cfile, obj.calcsettings.calcthreshold);
+            [fibsvalBin, fibsvalSum, fibsvalMean, fibsvalPeak, ...
+                fibsval5Peak, fibsvalSigmoidPeak, fibcell_efield, ...
+                connFiberInd, totalFibers] = ea_fiberfiltering_calcvals( ...
+                vatlist, cfile, obj.calcsettings.calcthreshold);
             obj.results.fiberfiltering.(connid).('VAT_Ttest').fibsval = fibsvalBin;
             obj.results.fiberfiltering.(connid).connFiberInd_VAT = connFiberInd; % old fiberfiltering files do not have these data and will fail when using pathway atlases
             obj.results.fiberfiltering.(connid).totalFibers = totalFibers; % total number of fibers in the connectome to work with global indices
@@ -560,6 +586,8 @@ classdef ea_unifiedmapping < handle
             obj.results.fiberfiltering.(connid).('efield_mean').fibsval = fibsvalMean;
             obj.results.fiberfiltering.(connid).('efield_peak').fibsval = fibsvalPeak;
             obj.results.fiberfiltering.(connid).('efield_5peak').fibsval = fibsval5Peak;
+            obj.results.fiberfiltering.(connid).('efield_sigmoid_peak').fibsval = ...
+                fibsvalSigmoidPeak;
             obj.results.fiberfiltering.(connid).('plainconn').fibsval = fibsvalBin;
             obj.results.fiberfiltering.(connid).('efield_fibers').fibcell= fibcell_efield;
             % temp. duplicate fibcell, will be fixed in the new explorer
@@ -571,7 +599,7 @@ classdef ea_unifiedmapping < handle
 
         function calculate_on_fibers(obj,cfile)
             connid = (ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome));
-            
+
           
             % OSS-DBS E-field should be computed (not just warped!) in this space
             
@@ -604,6 +632,10 @@ classdef ea_unifiedmapping < handle
             obj.results.fiberfiltering.(connid).('efield_mean').fibsval = fibsvalMean_magn;
             obj.results.fiberfiltering.(connid).('efield_peak').fibsval = fibsvalPeak_magn;
             obj.results.fiberfiltering.(connid).('efield_5peak').fibsval = fibsval5Peak_magn;
+            sigmoidPeakMagn = cellfun( ...
+                @localSigmoidPreserveZeros, fibsvalPeak_magn, 'Uni', 0);
+            obj.results.fiberfiltering.(connid).('efield_sigmoid_peak').fibsval = ...
+                sigmoidPeakMagn;
             obj.results.fiberfiltering.(connid).('plainconn').fibsval = fibsvalBin_magn;
             obj.results.fiberfiltering.(connid).('efield_fibers').fibcell = fibcell_magn;
             obj.results.fiberfiltering.(connid).('efield_fibers').connFiberInd_VAT = connFiberInd_magn; % old fiberfiltering files do not have these data and will fail when using pathway atlases
@@ -613,6 +645,10 @@ classdef ea_unifiedmapping < handle
             obj.results.fiberfiltering.(connid).('efield_proj_mean').fibsval = fibsvalMean_proj;
             obj.results.fiberfiltering.(connid).('efield_proj_peak').fibsval = fibsvalPeak_proj;
             obj.results.fiberfiltering.(connid).('efield_proj_5peak').fibsval = fibsval5Peak_proj;
+            sigmoidPeakProj = cellfun( ...
+                @localSigmoidPreserveZeros, fibsvalPeak_proj, 'Uni', 0);
+            obj.results.fiberfiltering.(connid).('efield_proj_sigmoid_peak').fibsval = ...
+                sigmoidPeakProj;
             obj.results.fiberfiltering.(connid).('plainconn_proj').fibsval = fibsvalBin_proj;
             obj.results.fiberfiltering.(connid).('efield_proj').fibcell = fibcell_proj;
             obj.results.fiberfiltering.(connid).('efield_proj').connFiberInd_VAT = connFiberInd_proj; % old fiberfiltering files do not have these data and will fail when using pathway atlases
@@ -974,6 +1010,12 @@ classdef ea_unifiedmapping < handle
 
             hasM = isstruct(obj.M);
 
+            if hasM && isfield(obj.M,'pseudoM') && ...
+                    isfield(obj.M,'ROI') && isfield(obj.M.ROI,'list')
+                % allpatients tracks patients, not side-specific files.
+                obj.allpatients = obj.M.ROI.list(:,1);
+            end
+
             if isempty(obj.patientselection) && hasM
                 if isfield(obj.M,'ui') && isfield(obj.M.ui,'listselect') && ~isempty(obj.M.ui.listselect)
                     obj.patientselection = obj.M.ui.listselect;
@@ -1194,7 +1236,18 @@ classdef ea_unifiedmapping < handle
 
                     fibsval = full(obj.results.fiberfiltering.(ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome)).(S.fibsvalType).fibsval);
                 else
-                    fibsval = full(obj.results.fiberfiltering.(ea_unifiedmapping_conn2connid(obj.calcsettings.fibfilt_connectome)).(ea_unifiedmapping_method2methodid(obj)).fibsval);
+                    connid = ea_unifiedmapping_conn2connid( ...
+                        obj.calcsettings.fibfilt_connectome);
+                    if strcmp(obj.statsettings.stimulationmodel, ...
+                            'Sigmoid Field') && ...
+                            obj.calcsettings.connectivity_type ~= 2
+                        fibsval = ...
+                            ea_unifiedmapping_getsigmoidfiberfibsval( ...
+                            obj, connid);
+                    else
+                        fibsval = obj.results.fiberfiltering.(connid).( ...
+                            ea_unifiedmapping_method2methodid(obj)).fibsval;
+                    end
                 end
             else
                 fibsval = {};
@@ -1225,6 +1278,10 @@ classdef ea_unifiedmapping < handle
                     training = cvp.training{c};
                     test = cvp.test{c};
                 end
+
+                % remember which patient(s) this fold held out, for the
+                % per-fold significant-fiber report below.
+                heldout{c} = patientsel(test);
 
                 % now do LOO within the training group
                 if obj.nestedLOO
@@ -1281,6 +1338,83 @@ classdef ea_unifiedmapping < handle
                     Predicted_scores(test) = Ihat_voters_prediction(1:end,1); % only one value here atm
                 end
 
+            end
+
+            % Report how many fibers survived significance thresholding
+            % (e.g. permutation-based, uncorrected or max-statistic) for
+            % each cross-validation fold's training-set model.
+            if ~silent && obj.showsignificantonly && strcmp(obj.drawTool,'fiberfiltering') && ...
+                    iscell(val_struct) && ~isempty(val_struct) && isstruct(val_struct{1}) && ...
+                    isfield(val_struct{1},'usedidx') && ~isempty(val_struct{1}.usedidx)
+                nSides = size(val_struct{1}.usedidx,2);
+                nFibersPerFold = nan(cvp.NumTestSets, nSides);
+                for foldidx=1:cvp.NumTestSets
+                    for side=1:nSides
+                        nFibersPerFold(foldidx,side) = numel(val_struct{foldidx}.usedidx{1,side});
+                    end
+                end
+                fprintf('\nFibers kept for the model per fold (significance-thresholded):\n');
+                foldfmt = ['  Fold %0', num2str(numel(num2str(cvp.NumTestSets))), 'd (held out: %s): %s\n'];
+                for foldidx=1:cvp.NumTestSets
+                    heldoutidx = heldout{foldidx};
+                    heldoutlabels = cell(1,numel(heldoutidx));
+                    for hk=1:numel(heldoutidx)
+                        if heldoutidx(hk) >= 1 && heldoutidx(hk) <= numel(obj.M.patient.list)
+                            heldoutlabels{hk} = regexp(obj.M.patient.list{heldoutidx(hk)}, '[^\\/]+$', 'match', 'once');
+                        else
+                            heldoutlabels{hk} = num2str(heldoutidx(hk));
+                        end
+                    end
+                    fprintf(foldfmt, foldidx, strjoin(heldoutlabels, ', '), mat2str(nFibersPerFold(foldidx,:)));
+                end
+                fprintf('  Mean across folds: %s\n', mat2str(round(mean(nFibersPerFold,1))));
+                fprintf('  Min / Max across folds: %s / %s\n\n', mat2str(min(nFibersPerFold,[],1)), mat2str(max(nFibersPerFold,[],1)));
+
+                % Plot each held-out patient's own outcome value against the
+                % fiber count of the fold they were held out of, to check
+                % whether fold-to-fold collapses (e.g. very low counts) track
+                % extreme/outlier response values rather than being noise.
+                try
+                    outcomeperfold = nan(cvp.NumTestSets,1);
+                    for foldidx=1:cvp.NumTestSets
+                        heldoutidx = heldout{foldidx};
+                        heldoutidx = heldoutidx(heldoutidx>=1 & heldoutidx<=size(obj.responsevar,1));
+                        if ~isempty(heldoutidx)
+                            outcomeperfold(foldidx) = mean(obj.responsevar(heldoutidx,1));
+                        end
+                    end
+                    keepfold = isfinite(outcomeperfold);
+                    if nnz(keepfold) >= 3
+                        hfig = figure('Name','Held-out outcome vs. fibers kept per fold','Color','w','NumberTitle','off');
+                        hold on
+                        sidecolors = lines(nSides);
+                        hs = gobjects(1,nSides);
+                        for side=1:nSides
+                            hs(side) = scatter(outcomeperfold(keepfold), nFibersPerFold(keepfold,side), 60, sidecolors(side,:), 'filled');
+                        end
+                        foldnums = find(keepfold);
+                        for fi=1:numel(foldnums)
+                            text(outcomeperfold(foldnums(fi)), max(nFibersPerFold(foldnums(fi),:)), ...
+                                ['  ',num2str(foldnums(fi))], 'FontSize',8);
+                        end
+                        xlabel(strrep(obj.responsevarlabel,'_',' '));
+                        ylabel('Fibers kept for the model (held-out fold)');
+                        legendlabels = arrayfun(@(s) sprintf('Side %d',s), 1:nSides, 'UniformOutput', false);
+                        legend(hs, legendlabels, 'Location','best');
+                        statlines = cell(1,nSides);
+                        for side=1:nSides
+                            [rho,pval] = corr(outcomeperfold(keepfold), nFibersPerFold(keepfold,side), ...
+                                'type','Spearman','rows','pairwise');
+                            statlines{side} = sprintf('Side %d: Spearman r=%.2f, p=%.3f', side, rho, pval);
+                        end
+                        title(['Held-out patient outcome vs. fold fiber count', newline, strjoin(statlines,' | ')], ...
+                            'FontSize',10);
+                        box on
+                        hold off
+                    end
+                catch ME
+                    ea_cprintf('CmdWinWarnings', 'Could not plot held-out outcome vs. fiber count: %s\n', ME.message);
+                end
             end
 
             % check if binary variable and not permutation test
@@ -2019,6 +2153,18 @@ else
     desc = 'negative';
 end
 end
+
+function sigmoidValues = localSigmoidPreserveZeros(values)
+% Transform calculated fiber values without converting structural zeros.
+sigmoidValues = sparse(size(values, 1), size(values, 2));
+nonzeroIndex = find(values);
+if ~isempty(nonzeroIndex)
+    sigmoidValues(nonzeroIndex) = ...
+        ea_unified_probabilityActivationFunction( ...
+        full(values(nonzeroIndex)));
+end
+end
+
 function fibers=ea_fibcell2fibmat(fibers)
 [idx,~]=cellfun(@size,fibers);
 fibers=cell2mat(fibers);

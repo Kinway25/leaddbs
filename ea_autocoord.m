@@ -86,7 +86,7 @@ if strcmp(options.leadprod, 'mapper')
 end
 
 if strcmp(options.leadprod, 'predict')
-   ea_predict(options);
+    ea_predict(options);
 end
 
 % only 3D-rendering viewer can be opened if no patient is selected.
@@ -186,42 +186,155 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
         options.primarytemplate = bids.spacedef.misfit_template;
     end
 
-    % Pre-coregister pre-op anchor image
-    if ~isMiniset && isfield(options.subj, 'preopAnat')
-        if ~isfile(options.subj.preopAnat.(fields{1}).coreg)
-            ea_precoreg(options.subj.preopAnat.(fields{1}).preproc, ... % Input anchor image
-                options.primarytemplate, ... % Template to use
-                options.subj.preopAnat.(fields{1}).coreg, ... % Output pre-coregistered image
-                options.subj.coreg.transform.(fields{1})); % % Pre-coregistration transform
+    % Run AC/PC before creating the coregistered anchor image
+    acpcDone = 0;
 
-            % Check if anchor image has been properly pre-coregistered. If
-            % not, fallback to preproc image.
+    % Check whether coregistration had already been completed BEFORE AC/PC
+    coregExistedBeforeACPC = false;
+    
+    if ~isMiniset && isfield(options.subj, 'coreg') && ...
+            isfield(options.subj.coreg, 'anat')
+    
+        % Existing PRE-OP coregistration results
+      
+        if isfield(options.subj.coreg.anat, 'preop')
+    
+            f = fieldnames(options.subj.coreg.anat.preop);
+    
+            % The anchor image itself is not evidence that another image
+            % has actually been coregistered.
+            f(strcmp(f, options.subj.AnchorModality)) = [];
+    
+            for k = 1:numel(f)
+                if isfile(options.subj.coreg.anat.preop.(f{k}))
+                    coregExistedBeforeACPC = true;
+                    break
+                end
+            end
+        end
+    
+        % Existing POST-OP coregistration results
+        if ~coregExistedBeforeACPC && ...
+                isfield(options.subj.coreg.anat, 'postop')
+    
+            f = fieldnames(options.subj.coreg.anat.postop);
+    
+            for k = 1:numel(f)
+                if isfile(options.subj.coreg.anat.postop.(f{k}))
+                    coregExistedBeforeACPC = true;
+                    break
+                end
+            end
+        end
+    end
+    
+    if options.acpc.do
+        acpcDone = ea_runacpc(options);
+    end
+    
+    % Preserve the previous resize behavior, but do not run
+    % ea_runacpc twice when both options are selected.
+    if options.resize.do && ~options.acpc.do
+        acpcDone = ea_runacpc(options);
+    end
+
+
+    if ~isMiniset && isfield(options.subj, 'preopAnat')
+        anchorField = options.subj.AnchorModality;
+    
+        preprocAnchor = options.subj.preopAnat.(anchorField).preproc;
+        coregAnchor = options.subj.preopAnat.(anchorField).coreg;
+        anchorTransform = options.subj.coreg.transform.(anchorField);
+    
+        % If AC/PC was run, the existing coregistration anchor was built
+        % from the old preprocessing T1 and must be regenerated.
+    
+        if acpcDone && coregExistedBeforeACPC
+            warningMsg = sprintf([ ...
+                'The preprocessing anchor was modified after coregistration had already been completed.\n\n' ...
+                'Existing coregistration results may no longer be valid.\n' ...
+                'Please rerun coregistration before continuing with downstream steps.']);
+        
+            ea_cprintf('CmdWinWarnings', ...
+                '\nWARNING: The preprocessing anchor was modified after coregistration. Please rerun coregistration!\n\n');
+        
+            warndlg( ...
+                warningMsg, ...
+                'Rerun Coregistration');
+        end
+
+        if acpcDone
+            if isfile(coregAnchor)
+                ea_delete(coregAnchor);
+            end
+    
+            ea_delete(anchorTransform);
+        end
+
+        % Build the coregistration anchor from the current preprocessing T1.
+        doCoregNow = options.coregmr.do || options.coregct.do;
+    
+        if doCoregNow && ~isfile(coregAnchor)
+            ea_precoreg( ...
+                preprocAnchor, ...
+                options.primarytemplate, ...
+                coregAnchor, ...
+                anchorTransform);
+    
+            % Check whether the new anchor image is readable.
             try
-                load_nii(options.subj.preopAnat.(fields{1}).coreg);
+                load_nii(coregAnchor);
+    
             catch
-                ea_cprintf('CmdWinWarnings', 'Anchor image was not properly pre-coregistered. Fallback to preproc image instead.\n');
-                ea_delete(options.subj.coreg.transform.(fields{1}));
-                ea_mkdir(fileparts(options.subj.preopAnat.(fields{1}).coreg));
-                copyfile(options.subj.preopAnat.(fields{1}).preproc, options.subj.preopAnat.(fields{1}).coreg);
+                ea_cprintf( ...
+                    'CmdWinWarnings', ...
+                    ['Anchor image was not properly pre-coregistered. ' ...
+                     'Fallback to preproc image instead.\n']);
+    
+                if isfile(anchorTransform)
+                    ea_delete(anchorTransform);
+                end
+    
+                ea_mkdir(fileparts(coregAnchor));
+                copyfile(preprocAnchor, coregAnchor);
+            end
+        end
+    end
+    
+    coregDone = 0;
+
+    if options.coregmr.do
+        % Coregister pre-op MRIs to pre-op anchor image
+
+        % If doing coregistration and there is Dwi -> Create b0 and FA
+        options = ea_getptopts(options.subj.subjDir, options);
+        if isfile(fullfile(options.subj.subjDir,options.prefs.dti))
+            % Ensure a b0 image exists at options.prefs.b0 before the
+            % coregistration loop runs. B0->T1 coregistration itself is
+            % handled by ea_coregpreopmr below (B0 is now a regular
+            % modality injected into options.subj.coreg.anat.preop).
+            try
+                ea_exportb0(options);
+            catch MEb0
+                warning('Lead-Connectome DWI preparation: automatic b0 export failed (%s). Proceeding with existing configuration.', MEb0.message);
+            end
+        end
+
+        % Coregister all pre-op MRIs to anchor, including B0 
+        coregDone = ea_coregpreopmr(options);
+
+        if isfile(fullfile(options.subj.subjDir,options.prefs.dti))
+            % Create FA from DWI and apply the B0->T1 transform to FA.
+            % This must run AFTER ea_coregpreopmr so the B0->T1 transform
+            % file is guaranteed to exist.
+            try
+                options = ea_ensure_fa_and_fa2anat(options);
+            catch MEfa
+                warning('Lead-Connectome: FA creation / FA->anat coregistration failed (%s). Proceeding.', MEfa.message);
             end
         end
     end
 
-    coregDone = 0;
-
-    if options.acpc.do
-        acpcDone = ea_runacpc(options);
-    end
-
-    if options.resize.do
-        acpcDone = ea_runacpc(options);
-    end
-
-    if options.coregmr.do
-        % Coregister pre-op MRIs to pre-op anchor image
-        % TODO: coreg_fa disabled currently
-        coregDone = ea_coregpreopmr(options);
-    end
 
     if strcmp(options.subj.postopModality, 'MRI') && options.coregmr.do
         % Coregister post-op MRI to pre-op MRI
@@ -273,6 +386,11 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
     end
 
     if options.checkreg
+        % Ensure B0/FA are injected into options even when coregistration was not rerun
+        if ~isfield(options.subj.coreg.anat.preop, 'b0') || ~isfield(options.subj.coreg.anat.preop, 'fa')
+            options = ea_getptopts(options.subj.subjDir, options);
+        end
+
         % Export checkreg figures
         if isempty(ea_regexpdir([options.subj.coregDir, filesep, 'checkreg'], '^(?!\.).*\.png$'))
             ea_gencheckregfigs(options, 'coreg');
@@ -289,7 +407,7 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
         evalin('base',' clear checkregempty');
 
         if e && ~ea_reglocked(options, options.subj.brainshift.anat.scrf) ...
-             && isfile(options.subj.brainshift.transform.instore)
+                && isfile(options.subj.brainshift.transform.instore)
             ea_subcorticalrefine(options);
         end
     end
@@ -353,11 +471,6 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
             elmodel=options.elmodel;
             if ~isequal(options.reconmethod, 'LeGUI (Davis 2021)')
                 ea_save_reconstruction(coords_mm,trajectory,markers,elmodel,0,options);
-                % start with a clean slate of angles
-                load(options.subj.recon.recon,'reco')
-                reco.angles = ea_diode_emptyorientation(numel(reco.props));
-                save(options.subj.recon.recon,'reco')
-                clear reco
             end
             if isfield(options,'hybridsave')
                 options=rmfield(options,'hybridsave');
@@ -377,30 +490,30 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
     end
 
     if options.ecog.extractsurface.do
-       switch options.ecog.extractsurface.method
-           case 1 % CAT 12
-               hastb=ea_hastoolbox('cat');
-               if ~hastb
-                   ea_error('CAT12 needs to be installed to the SPM toolbox directory');
-               end
-               ea_cat_seg(options);
-           case 2 % FS
-               if exist([options.subj.freesurferDir,filesep,'sub-',options.subj.subjId,filesep],'dir')
-                   if options.overwriteapproved
-                       % for now still ask user to confirm recalculation
-                       % since fs takes so long.
-                       answ=questdlg('Existing FreeSurfer output folder found. Are you sure you want to recalculate results & overwrite?', ...
-                          'FreeSurfer output found','Recalculate & Overwrite','Skip','Skip');
+        switch options.ecog.extractsurface.method
+            case 1 % CAT 12
+                hastb=ea_hastoolbox('cat');
+                if ~hastb
+                    ea_error('CAT12 needs to be installed to the SPM toolbox directory');
+                end
+                ea_cat_seg(options);
+            case 2 % FS
+                if exist([options.subj.freesurferDir,filesep,'sub-',options.subj.subjId,filesep],'dir')
+                    if options.overwriteapproved
+                        % for now still ask user to confirm recalculation
+                        % since fs takes so long.
+                        answ=questdlg('Existing FreeSurfer output folder found. Are you sure you want to recalculate results & overwrite?', ...
+                            'FreeSurfer output found','Recalculate & Overwrite','Skip','Skip');
 
-                       switch lower(answ)
-                           case 'recalculate & overwrite'
-                               ea_runfreesurfer(options)
-                       end
-                   end
-               else
+                        switch lower(answ)
+                            case 'recalculate & overwrite'
+                                ea_runfreesurfer(options)
+                        end
+                    end
+                else
                     ea_runfreesurfer(options);
-               end
-       end
+                end
+        end
     end
 
     if options.dolc % perform lead connectome subroutine..
@@ -413,59 +526,64 @@ if ~strcmp(options.patientname,'No Patient Selected') && ~isempty(options.patien
             end
         end
 
+        % Commented code that registers and normalizes data to LC - we that
+        % assume user knows that should do it before running LC pipeline
+        %
         % If at least one *structural* Lead-Connectome option is enabled,
         % prepare DWI data (copy from rawdata, set prefs, export b0) before
         % entering the main Lead-Connectome routine. This mirrors the
         % intended "old" pipeline behaviour but integrates it cleanly into
         % the main GUI.
-        try
-            doStrucLC = false;
-            if isfield(options, 'lc') && isfield(options.lc, 'struc')
-                s = options.lc.struc;
-                if (isfield(s, 'ft') && isfield(s.ft, 'do') && s.ft.do) || ...
-                   (isfield(s, 'ft') && isfield(s.ft, 'normalize') && s.ft.normalize) || ...
-                   (isfield(s, 'compute_CM') && s.compute_CM) || ...
-                   (isfield(s, 'compute_GM') && s.compute_GM)
-                    doStrucLC = true;
-                end
-            end
-
-            if doStrucLC
-                % For BIDS-style datasets in derivatives/leaddbs, copy DWI
-                % from rawdata into preprocessing/dwi and set prefs.*.
-                if contains([options.root, options.patientname], {'derivatives', 'leaddbs'})
-                    options = ea_prepare_dti_bids(options);
-                end
-
-                % Ensure a b0 image exists at options.prefs.b0 (or its BIDS
-                % variant) before fiber tracking / normalization. This will
-                % create preprocessing/dwi/*_b0.nii if it is still missing.
-                try
-                    ea_exportb0(options);
-                catch MEb0
-                    warning('Lead-Connectome DWI preparation: automatic b0 export failed (%s). Proceeding with existing configuration.', MEb0.message);
-                end
-
-                % Ensure that a B0->T1 coregistration transform exists so
-                % that warped parcellations (b0wAtlas) and fiber
-                % normalization share a consistent affine relationship
-                % between diffusion space and anatomy.
-                try
-                    options = ea_ensure_b0_coreg(options);
-                catch MEcoreg
-                    warning('Lead-Connectome DWI preparation: automatic B0->T1 coreg failed (%s). Proceeding with existing configuration.', MEcoreg.message);
-                end
-
-                % Create FA from DWI and FA coregistered to anat in coregistration/anat
-                try
-                    options = ea_ensure_fa_and_fa2anat(options);
-                catch MEfa
-                    warning('Lead-Connectome: FA creation / FA->anat coregistration failed (%s). Proceeding.', MEfa.message);
-                end
-            end
-        catch MEprep
-            warning('Lead-Connectome DWI preparation step failed (%s). Continuing with existing options.', MEprep.message);
-        end
+        % try
+        %     doStrucLC = false;
+        %     if isfield(options, 'lc') && isfield(options.lc, 'struc')
+        %         s = options.lc.struc;
+        %         if (isfield(s, 'ft') && isfield(s.ft, 'do') && s.ft.do) || ...
+        %            (isfield(s, 'ft') && isfield(s.ft, 'normalize') && s.ft.normalize) || ...
+        %            (isfield(s, 'compute_CM') && s.compute_CM) || ...
+        %            (isfield(s, 'compute_GM') && s.compute_GM)
+        %             doStrucLC = true;
+        %         end
+        %     end
+        %
+        %     if doStrucLC
+        %         directory = [options.root, options.patientname, filesep];
+        %
+        %         % For BIDS-style datasets in derivatives/leaddbs, copy DWI
+        %         % from rawdata into preprocessing/dwi and set prefs.*.
+        %         if contains(directory, 'derivatives') || contains(directory, 'leaddbs')
+        %             options = ea_prepare_dti_bids(options);
+        %         end
+        %
+        %         % Ensure a b0 image exists at options.prefs.b0 (or its BIDS
+        %         % variant) before fiber tracking / normalization. This will
+        %         % create preprocessing/dwi/*_b0.nii if it is still missing.
+        %         try
+        %             ea_exportb0(options);
+        %         catch MEb0
+        %             warning('Lead-Connectome DWI preparation: automatic b0 export failed (%s). Proceeding with existing configuration.', MEb0.message);
+        %         end
+        %
+        %         % Ensure that a B0->T1 coregistration transform exists so
+        %         % that warped parcellations (b0wAtlas) and fiber
+        %         % normalization share a consistent affine relationship
+        %         % between diffusion space and anatomy.
+        %         try
+        %             options = ea_ensure_b0_coreg(options);
+        %         catch MEcoreg
+        %             warning('Lead-Connectome DWI preparation: automatic B0->T1 coreg failed (%s). Proceeding with existing configuration.', MEcoreg.message);
+        %         end
+        %
+        %         % Create FA from DWI and FA coregistered to anat in coregistration/anat
+        %         try
+        %             options = ea_ensure_fa_and_fa2anat(options);
+        %         catch MEfa
+        %             warning('Lead-Connectome: FA creation / FA->anat coregistration failed (%s). Proceeding.', MEfa.message);
+        %         end
+        %     end
+        % catch MEprep
+        %     warning('Lead-Connectome DWI preparation step failed (%s). Continuing with existing options.', MEprep.message);
+        % end
 
         % Now run the main Lead-Connectome routine (structural + functional)
         ea_perform_lc(options);

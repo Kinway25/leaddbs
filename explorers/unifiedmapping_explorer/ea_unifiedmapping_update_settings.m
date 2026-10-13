@@ -24,6 +24,12 @@ function new_tractset = ea_unifiedmapping_update_settings(explorer,new_settings)
     explorer.showsignificantonly = new_settings.showsignificantonly;
     explorer.alphalevel = new_settings.alphalevel;
     explorer.multcompstrategy = new_settings.multcompstrategy;
+    if isfield(new_settings, 'multcompNperm')
+        explorer.multcompNperm = new_settings.multcompNperm;
+    end
+    if isfield(new_settings, 'multcompmaxworkers')
+        explorer.multcompmaxworkers = new_settings.multcompmaxworkers;
+    end
     explorer.basepredictionon = new_settings.basepredictionon;
     explorer.mirrorsides = new_settings.mirrorsides;
     explorer.modelNormalization = new_settings.modelNormalization;

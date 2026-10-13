@@ -53,39 +53,37 @@ anatPath = fullfile(cand(1).folder, cand(1).name);
 b0Name  = regexprep(b0Name, '\.nii(\.gz)?$', '');
 anatName = regexprep(anatName, '\.nii(\.gz)?$', '');
 
-% Search for existing transform B0->T1
-searchDirs = {
-    fullfile(directory, 'coregistration', 'transformations')
-    fullfile(directory, 'preprocessing', 'anat')
-    directory
-};
-pattern = [b0Name, '2', anatName]; % B0 -> T1
-for iDir = 1:numel(searchDirs)
-    cdir = searchDirs{iDir};
-    if ~isfolder(cdir), continue; end
-    mfiles = dir(fullfile(cdir, '*.mat'));
-    for k = 1:numel(mfiles)
-        if contains(mfiles(k).name, pattern)
-            fprintf('ea_ensure_b0_coreg: Found existing B0->T1 transform: %s (in %s)\n', ...
-                mfiles(k).name, cdir);
-            return;
-        end
-    end
-end
+% Search for existing B0<->T1 transform (robust detection)
+hit = ea_find_b0_t1_transform(directory, options.coregmr.method);
 
+if ~isempty(hit)
+    fprintf('ea_ensure_b0_coreg: Found existing B0<->T1 transform: %s\n', hit);
+    return;
+end
 % No existing transform found -> run coregistration once
 fprintf('ea_ensure_b0_coreg: No B0->T1 transform found. Running coregistration now...\n');
 
-% Build output filename in preprocessing/anat
-outName = sprintf('%s2%s_%s.mat', b0Name, anatName, lower(regexp(options.coregmr.method, '^[^\s\(]+', 'match', 'once')));
-outDir  = fullfile(directory, 'preprocessing', 'anat');
-if ~isfolder(outDir), outDir = directory; end
-ofile   = fullfile(outDir, [b0Name, '2', anatName, '.nii']);
+% Build BIDS-style output filename for the coregistered B0 in coregistration/anat
+outDir = fullfile(directory, 'coregistration', 'anat');
+ea_mkdir(outDir);
+ofile  = fullfile(outDir, ['sub-', options.subj.subjId, '_ses-preop_space-anchorNative_b0.nii']);
+
+coregTransformDir = fullfile(directory, 'coregistration', 'transformations');
+ea_mkdir(coregTransformDir);
 
 try
     affinefile = ea_coregimages(options, b0Path, anatPath, ofile, {}, 1, [], 1);
     if ~isempty(affinefile)
-        fprintf('ea_ensure_b0_coreg: Created B0->T1 transform: %s\n', affinefile{1});
+        % Move transform file from preprocessing to coregistration/transformations
+        for k = 1:numel(affinefile)
+            if isfile(affinefile{k})
+                [~, tfname, tfext] = fileparts(affinefile{k});
+                dest = fullfile(coregTransformDir, [tfname, tfext]);
+                movefile(affinefile{k}, dest);
+                affinefile{k} = dest;
+            end
+        end
+        fprintf('ea_ensure_b0_coreg: B0->T1 transforms saved to: %s\n', coregTransformDir);
     else
         fprintf('ea_ensure_b0_coreg: ea_coregimages did not return a transform file.\n');
     end
@@ -93,3 +91,77 @@ catch ME
     warning('ea_ensure_b0_coreg: Coregistration B0->T1 failed: %s', ME.message);
 end
 
+function hit = ea_find_b0_t1_transform(directory, methodHint)
+% Return fullpath to a plausible B0<->T1 transform, or '' if none found.
+
+if nargin < 2 || isempty(methodHint), methodHint = ''; end
+methodHint = lower(methodHint);
+
+searchDir = fullfile(directory,'coregistration','transformations');
+
+% gather candidates recursively
+exts = {'*.mat','*.h5','*.txt'};
+cands = {};
+
+if isfolder(searchDir)
+    for e = 1:numel(exts)
+        d = dir(fullfile(searchDir,'**',exts{e}));
+        for k = 1:numel(d)
+            cands{end+1} = fullfile(d(k).folder, d(k).name);
+        end
+    end
+end
+
+if isempty(cands), hit = ''; return; end
+
+% scoring: prefer files that mention both b0 and t1/anat, and the method
+bestScore = -Inf;
+hit = '';
+
+for i = 1:numel(cands)
+    [~,name,ext] = fileparts(cands{i});
+    fname = lower([name ext]);
+
+    score = 0;
+
+    % must mention b0-ish and t1/anat-ish
+    if contains(fname,'b0') || contains(fname,'meanb0') || contains(fname,'dwi')
+        score = score + 2;
+    end
+    if contains(fname,'t1') || contains(fname,'t1w') || contains(fname,'anat')
+        score = score + 2;
+    end
+
+    % method hint bonus
+    if ~isempty(methodHint) && contains(fname, methodHint)
+        score = score + 1;
+    end
+
+    % canonical SPM names get extra weight
+    if strcmp(fname,'b02anat_t1_spm.mat') || strcmp(fname,'anat_t12b0_spm.mat')
+        score = score + 5;
+    end
+
+    % quick sanity check for .mat: has 4x4 numeric matrix somewhere
+    if strcmp(ext,'.mat') && score >= 4
+        try
+            S = load(cands{i});
+            has4x4 = any(structfun(@(v) isnumeric(v) && isequal(size(v),[4 4]), S));
+            if has4x4
+                score = score + 1;
+            end
+        catch
+            score = score - 2; % unreadable .mat, penalize
+        end
+    end
+
+    if score > bestScore
+        bestScore = score;
+        hit = cands{i};
+    end
+end
+
+% require minimal confidence
+if bestScore < 4
+    hit = '';
+end

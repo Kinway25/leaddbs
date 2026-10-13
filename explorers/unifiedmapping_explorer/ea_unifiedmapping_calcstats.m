@@ -81,11 +81,9 @@ switch obj.drawTool
         else
             switch obj.statsettings.stimulationmodel
                 case 'Sigmoid Field'
-                    fibsval_raw = obj.results.fiberfiltering.(connid).(ea_unifiedmapping_method2methodid(obj)).fibsval;
-                    init_val = fibsval_raw;  % initialize
-                    for side = 1:size(fibsval_raw,2)
-                        init_val{1,side}(:,:) = ea_unified_probabilityActivationFunction(fibsval_raw{1,side}(:,:));
-                    end
+                    fibsval = ...
+                        ea_unifiedmapping_getsigmoidfiberfibsval(obj, connid);
+                    init_val = cellfun(@full, fibsval, 'Uni', 0);
                 otherwise
                     init_val = cellfun(@full, obj.results.fiberfiltering.(connid).(ea_unifiedmapping_method2methodid(obj)).fibsval, 'Uni', 0);
             end
@@ -112,6 +110,9 @@ for group = groups
         vals{group,side}=nan(size(gval{side}(:,gpatsel),1),1);
         if obj.showsignificantonly
             pvals{group,side}=vals{group,side};
+            if startsWith(lower(obj.multcompstrategy),'permutation')
+                permdata{group,side}=[]; % filled in below once valsin/outcomein are known, if the test actually runs
+            end
         end
         switch obj.drawTool
             case 'sweetspotmapping'
@@ -140,6 +141,11 @@ for group = groups
                         Nmap=ea_nansum((gval{side}(:,gpatsel)>obj.statsettings.efieldthreshold_spot),2);
                         gval{side}(Nmap<round((obj.statsettings.connthreshold/100)*length(gpatsel)),gpatsel)=nan;
                     case 'Sigmoid Field'
+                        if isfield(obj.statsettings, 'nanthreshold') && ...
+                                ~isempty(obj.statsettings.nanthreshold)
+                            gval{side}(gval{side} <= ...
+                                obj.statsettings.nanthreshold) = nan;
+                        end
                         gval{side}(:, gpatsel) = ea_SigmoidFromEfield(gval{side}(:, gpatsel));
                         Nmap = ea_nansum( gval{side}(:, gpatsel) > obj.statsettings.efieldthreshold_spot, 2);
                         minN = round((obj.statsettings.connthreshold / 100) * length(gpatsel)); 
@@ -265,7 +271,18 @@ for group = groups
                         pvals{group,side}=psout;
                     end
             end
-          
+
+            if exist('permdata','var')
+                if exist('nonemptyidx','var')
+                    permidx=nonemptyidx;
+                else % networkmapping: whole valsin matrix was tested, no subselection
+                    permidx=(1:numel(vals{group,side}))';
+                end
+                permdata{group,side}=struct('valsin',valsin,'outcomein',outcomein, ...
+                    'statfile',char(stattests.file(idx)),'H0',obj.statsettings.H0, ...
+                    'nonemptyidx',permidx);
+            end
+
         else
             if isempty(valsin)
                 ea_cprintf('CmdWinWarnings', 'group %d side %d: empty valsin!\n', group, side);
@@ -278,7 +295,10 @@ for group = groups
 end
 
 if obj.showsignificantonly
-    vals=ea_corrsignan(vals,pvals,obj);
+    if ~exist('permdata','var')
+        permdata=[];
+    end
+    vals=ea_unified_corrsignan(vals,pvals,obj,permdata);
 end
 
 if strcmp(obj.threshstrategy,'Unthresholded')
@@ -351,7 +371,8 @@ else
         for group=groups
             for side=1:numel(gval)
                 usedidx{group,side} = find(isfinite(vals{group,side}));
-                fibcell{group,side} = selectedFibcell{side}(usedidx{group,side});                vals{group,side} = vals{group,side}(usedidx{group,side}); % final weights for surviving fibers
+                fibcell{group,side} = selectedFibcell{side}(usedidx{group,side});                
+                vals{group,side} = vals{group,side}(usedidx{group,side}); % final weights for surviving fibers
                 if exist('pvals','var')
                     pvals{group,side} = pvals{group,side}(usedidx{group,side}); % final weights for surviving fibers
                 end
