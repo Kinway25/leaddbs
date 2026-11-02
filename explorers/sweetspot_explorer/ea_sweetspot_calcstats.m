@@ -342,8 +342,11 @@ for group=groups
                             ImpBinary=logical((Impr)>0); % make sure variable is actually binary
                             % restore nans
     
-                            [outvals,CI95_up,CI95_low,outps] = ea_discfibers_odds_ratios(invals,ImpBinary);
-                 
+                            amp = load('/home/interscan/Documents/data/JK/A_rampTable.mat');
+                            %[outvals,CI95_up,CI95_low,outps] = ea_discfibers_odds_ratios(invals,ImpBinary);
+                            [outvals,~,~,outps,~] = ea_discfibers_mixed_stat(invals,ImpBinary, amp.A(obj.M.patient.group(patsel')), obj.M.patient.group(patsel'));
+                            %[outvals,CI95_up,CI95_low,outps] = ea_discfibers_logit_reg_ME(invals,ImpBinary,obj.M.patient.group(patsel'));
+
                             %
                             if obj.showsignificantonly % only calculated if testing for significance.
                                 %pvals{group,side}(nonempty)=outps;

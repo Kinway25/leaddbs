@@ -303,12 +303,12 @@ classdef ea_sweetspot < handle
             % [training_all, test_all] = LOPO_Cologne(obj,patientsel_all);
             % NumTestSets = 24;
 
-            [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
-            training_all(:,all(test_all==0,1)) = [];
-            test_all(:,all(test_all==0,1)) = [];
-            NumTestSets = size(test_all,2);
+            % [training_all, test_all] = LOPO_Berlin_Cologne(obj,patientsel);
+            % training_all(:,all(test_all==0,1)) = [];
+            % test_all(:,all(test_all==0,1)) = [];
+            % NumTestSets = size(test_all,2);
 
-            %NumTestSets = cvp.NumTestSets;
+            NumTestSets = cvp.NumTestSets;
 
 
             if ~exist('Iperm', 'var') || isempty(Iperm)
@@ -332,11 +332,11 @@ classdef ea_sweetspot < handle
                 end
 
                 if isobject(cvp)
-                    % training = cvp.training(c);
-                    % test = cvp.test(c);
+                    training = cvp.training(c);
+                    test = cvp.test(c);
 
-                    training = training_all(:,c);
-                    test = test_all(:,c);
+                    % training = training_all(:,c);
+                    % test = test_all(:,c);
 
                     % training = training_shell(:,c);
                     % test = test_all(:,c);
@@ -515,10 +515,10 @@ classdef ea_sweetspot < handle
 
                         for c=1:NumTestSets
                             if isobject(cvp)
-                                %training = cvp.training(c);
-                                %test = cvp.test(c);
-                                training = training_shell(:,c);
-                                test = test_all(:,c);
+                                training = cvp.training(c);
+                                test = cvp.test(c);
+                                % training = training_shell(:,c);
+                                % test = test_all(:,c);
                                 % training = training_all(:,c);
                                 % test = test_all(:,c);
                             elseif isstruct(cvp)
