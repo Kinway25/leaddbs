@@ -282,7 +282,7 @@ oss_params = {
   "PathwayFile": None,
   "StimSets": {
     "Active": False,
-    "StimSetsFile": "/home/interscan/Documents/data/RajamaniTWEEED/derivatives/leaddbs/sub-TWEED07/stimulations/native/StimFitOSS/OSS_sim_files_rh/Current_protocols_0.csv"
+    "StimSetsFile": "Current_protocols.csv"
   },
   "StimulationFolder": "/home/interscan",
   "TruncateAfterActivePartRatio": None

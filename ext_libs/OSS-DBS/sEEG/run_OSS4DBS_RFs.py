@@ -212,14 +212,6 @@ def extract_electrode_coords(filepath: str, space: str, hemi_idx: int):
         print(f"An unexpected error occurred during data extraction: {e}")
         return None
 
-
-# # Define the file path (assuming the uploaded file is accessible)
-# path2subject = '/home/forel/Documents/data/CologneStimFit/derivatives/leaddbs/sub-CIR01'  # perhaps, this is not really needed and can be set to JD
-# path2segmask = '/home/forel/Documents/data/CologneStimFit/derivatives/leaddbs/sub-CIR01/stimulations/native/NBstim/segmask.nii'
-# stimFolder = '/home/forel/Documents/data/CologneStimFit/derivatives/leaddbs/sub-CIR01/stimulations/native/NBstim'
-
-# space = 'mni'
-
 if __name__ == '__main__':
 
     # called from MATLAB
@@ -250,8 +242,10 @@ if __name__ == '__main__':
     # load the template settings
     if contact_coords_rh.shape[1] == 8:
         oss_settings_template = 'oss-dbs_parameters_8contacts.mat'
+        current_protocols = 'Current_protocols_8contact_segm.csv'
     elif contact_coords_rh.shape[1] == 4:
         oss_settings_template = 'oss-dbs_parameters_4contacts.mat'
+        current_protocols = 'Current_protocols_4contact_conc.csv'
     else:
         print("TBA for monocontact electrodes")
         raise SystemExit
@@ -294,7 +288,9 @@ if __name__ == '__main__':
     
     ### Update the default OSS-DBS dictionary and run simulations
     from custom_dict import oss_params
-    
+    oss_params["StimSets"]["Active"] = True
+    oss_params["StimSets"]["StimSetsFile"] = current_protocols
+
     # iterate over contacts changing Phi and StimCenter
     N_contacts = lead_settings.get_phi_vec().shape[1]
     for hemi_idx in range(2):
@@ -392,12 +388,20 @@ if __name__ == '__main__':
             
             oss_params["MaterialDistribution"]["MRIPath"] = InputDict['path2segmask']
             oss_params["StimulationSignal"]["CurrentControlled"] = current_controlled
-            oss_params["Surfaces"][0]["Active"] = case_grounding
-            oss_params["Surfaces"][0]["Current[A]"] = grounded_current
             
             oss_params["Solver"]["MaximumSteps"] = 2000
     
-            oss_params["OutputPath"] = os.path.join(InputDict['stimFolder'],'Results_protocol_' + str(cnt_i) + HEMI_SUFFIX[hemi_idx])
+            
+
+            
+            if oss_params["StimSets"]["Active"]:
+                oss_params["Surfaces"][0]["Current[A]"] = -1.0
+                oss_params["Surfaces"][0]["Active"] = True
+                oss_params["OutputPath"] = os.path.join(InputDict['stimFolder'],'Results' + HEMI_SUFFIX[hemi_idx])
+            else:
+                oss_params["Surfaces"][0]["Active"] = case_grounding
+                oss_params["Surfaces"][0]["Current[A]"] = grounded_current
+                oss_params["OutputPath"] = os.path.join(InputDict['stimFolder'],'Results_protocol_' + str(cnt_i) + HEMI_SUFFIX[hemi_idx])
     
             # contact dictionary is specified separately
     
@@ -408,41 +412,58 @@ if __name__ == '__main__':
             cntct_dicts = np.empty(len(cnt_range), dtype=object)
             cntcts_made = 0
             
-            for i in cnt_range:
-                # all (truly) non-active contacts are floating with 0A
-                if stim_protocol[i] == 0.0:
-                    floating = True
+            if oss_params["StimSets"]["Active"]:
+
+                
+                for i in cnt_range:
+                    # StimSet contact def
                     cntct_dicts[cntcts_made] = {
                         # Assuming one-indexed contact ids
                         "Contact_ID": i + 1,
                         "Active": False,
-                        "Current[A]": 0.0,
+                        "Current[A]": 1 / len(cnt_range),
                         "Voltage[V]": 0.0,
                         "Floating": True,
                         "MaxMeshSizeEdge": 1e6
-                    }
-                else:
-                    # for current-controlled, we have a pseudo non-active contact
-                    if current_controlled:
+                    }     
+                    cntcts_made += 1
+            else:
+                for i in cnt_range:             
+                    
+                    # all (truly) non-active contacts are floating with 0A
+                    if stim_protocol[i] == 0.0:
+                        floating = True
                         cntct_dicts[cntcts_made] = {
-                            "Contact_ID": i + 1,  # OSS numbers contacts starting from 1!
+                            # Assuming one-indexed contact ids
+                            "Contact_ID": i + 1,
                             "Active": False,
-                            "Current[A]": stim_protocol[i]*0.001,
+                            "Current[A]": 0.0,
                             "Voltage[V]": 0.0,
                             "Floating": True,
-                            "MaxMeshSizeEdge": 1e6  # hardcoded for now,
+                            "MaxMeshSizeEdge": 1e6
                         }
                     else:
-                        cntct_dicts[cntcts_made] = {
-                            "Contact_ID": i + 1,  # OSS numbers contacts starting from 1!
-                            "Active": True,
-                            "Current[A]": 0.0,
-                            "Voltage[V]": stim_protocol[i],
-                            "Floating": False,
-                            "MaxMeshSizeEdge": 1e6  # hardcoded for now,
-                        }
-            
-                cntcts_made += 1
+                        # for current-controlled, we have a pseudo non-active contact
+                        if current_controlled:
+                            cntct_dicts[cntcts_made] = {
+                                "Contact_ID": i + 1,  # OSS numbers contacts starting from 1!
+                                "Active": False,
+                                "Current[A]": stim_protocol[i]*0.001,
+                                "Voltage[V]": 0.0,
+                                "Floating": True,
+                                "MaxMeshSizeEdge": 1e6  # hardcoded for now,
+                            }
+                        else:
+                            cntct_dicts[cntcts_made] = {
+                                "Contact_ID": i + 1,  # OSS numbers contacts starting from 1!
+                                "Active": True,
+                                "Current[A]": 0.0,
+                                "Voltage[V]": stim_protocol[i],
+                                "Floating": False,
+                                "MaxMeshSizeEdge": 1e6  # hardcoded for now,
+                            }
+                
+                    cntcts_made += 1
             
             oss_params['Electrodes'][0]['Contacts'] = cntct_dicts.tolist()
     
@@ -453,6 +474,10 @@ if __name__ == '__main__':
                 
             # run OSS-DBS
             with open(os.devnull, 'w') as FNULL: subprocess.call('ossdbs ' + os.path.join(InputDict['stimFolder'],'oss-dbs_parameters_adj.json'),shell=True)
+            
+            if oss_params["StimSets"]["Active"]:
+                # all computed already
+                break
     
             
     #         # clean-up
